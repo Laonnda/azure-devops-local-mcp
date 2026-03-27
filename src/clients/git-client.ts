@@ -1,0 +1,310 @@
+/**
+ * Azure DevOps Git API client.
+ * PAT scope required: vso.code (read), vso.code_write (comments)
+ */
+
+import type { AdoConfig } from "../auth/types.js";
+import { BaseClient } from "./base-client.js";
+
+export interface AdoRepository {
+  id: string;
+  name: string;
+  defaultBranch: string;
+  size: number;
+  webUrl: string;
+  project: { id: string; name: string };
+}
+
+export interface PullRequestSummary {
+  pullRequestId: number;
+  title: string;
+  description: string;
+  status: string;
+  createdBy: string;
+  creationDate: string;
+  sourceRefName: string;
+  targetRefName: string;
+  repository: { id: string; name: string };
+  reviewers: PrReviewer[];
+  isDraft: boolean;
+  url: string;
+}
+
+export interface PrReviewer {
+  displayName: string;
+  vote: number;
+  isRequired: boolean;
+}
+
+export interface PrThread {
+  id: number;
+  status: string;
+  comments: PrComment[];
+  threadContext?: {
+    filePath: string;
+    rightFileStart?: { line: number };
+    rightFileEnd?: { line: number };
+  };
+  isDeleted: boolean;
+  publishedDate: string;
+}
+
+export interface PrComment {
+  id: number;
+  content: string;
+  author: string;
+  publishedDate: string;
+  commentType: string;
+}
+
+interface ReposResponse {
+  value: RawRepo[];
+  count: number;
+}
+
+interface RawRepo {
+  id: string;
+  name: string;
+  defaultBranch?: string;
+  size: number;
+  webUrl: string;
+  project: { id: string; name: string };
+}
+
+interface PullRequestsResponse {
+  value: RawPullRequest[];
+  count: number;
+}
+
+interface RawPullRequest {
+  pullRequestId: number;
+  title: string;
+  description: string;
+  status: string;
+  createdBy: { displayName: string };
+  creationDate: string;
+  sourceRefName: string;
+  targetRefName: string;
+  repository: { id: string; name: string };
+  reviewers: { displayName: string; vote: number; isRequired: boolean }[];
+  isDraft: boolean;
+  url: string;
+}
+
+interface ThreadsResponse {
+  value: RawThread[];
+  count: number;
+}
+
+interface RawThread {
+  id: number;
+  status: string;
+  comments: {
+    id: number;
+    content: string;
+    author: { displayName: string };
+    publishedDate: string;
+    commentType: string;
+  }[];
+  threadContext?: {
+    filePath: string;
+    rightFileStart?: { line: number };
+    rightFileEnd?: { line: number };
+  };
+  isDeleted: boolean;
+  publishedDate: string;
+}
+
+export class GitClient extends BaseClient {
+  constructor(config: AdoConfig) {
+    super(config);
+  }
+
+  async listRepositories(project: string): Promise<AdoRepository[]> {
+    const response = await this.request<ReposResponse>("git/repositories", {
+      project,
+    });
+
+    return response.value.map((r) => ({
+      id: r.id,
+      name: r.name,
+      defaultBranch: r.defaultBranch || "",
+      size: r.size,
+      webUrl: r.webUrl,
+      project: r.project,
+    }));
+  }
+
+  async listPullRequests(
+    project: string,
+    options: {
+      repositoryId?: string;
+      status?: string;
+      creatorId?: string;
+      top?: number;
+    } = {},
+  ): Promise<PullRequestSummary[]> {
+    const repoPath = options.repositoryId
+      ? `git/repositories/${encodeURIComponent(options.repositoryId)}/pullrequests`
+      : "git/pullrequests";
+
+    const params = new URLSearchParams();
+    if (options.status && options.status !== "all") {
+      params.set("searchCriteria.status", options.status);
+    }
+    if (options.creatorId) {
+      params.set("searchCriteria.creatorId", options.creatorId);
+    }
+    if (options.top) {
+      params.set("$top", String(options.top));
+    }
+
+    const query = params.toString();
+    const path = query ? `${repoPath}?${query}` : repoPath;
+
+    const response = await this.request<PullRequestsResponse>(path, { project });
+
+    return response.value.map(mapPullRequest);
+  }
+
+  async getPullRequest(
+    project: string,
+    repositoryId: string,
+    pullRequestId: number,
+  ): Promise<PullRequestSummary> {
+    const raw = await this.request<RawPullRequest>(
+      `git/repositories/${encodeURIComponent(repositoryId)}/pullrequests/${pullRequestId}`,
+      { project },
+    );
+
+    return mapPullRequest(raw);
+  }
+
+  async getPullRequestThreads(
+    project: string,
+    repositoryId: string,
+    pullRequestId: number,
+  ): Promise<PrThread[]> {
+    const response = await this.request<ThreadsResponse>(
+      `git/repositories/${encodeURIComponent(repositoryId)}/pullrequests/${pullRequestId}/threads`,
+      { project },
+    );
+
+    return response.value.map((t) => ({
+      id: t.id,
+      status: t.status || "",
+      comments: t.comments.map((c) => ({
+        id: c.id,
+        content: c.content,
+        author: c.author.displayName,
+        publishedDate: c.publishedDate,
+        commentType: c.commentType,
+      })),
+      threadContext: t.threadContext,
+      isDeleted: t.isDeleted,
+      publishedDate: t.publishedDate,
+    }));
+  }
+
+  async createComment(
+    project: string,
+    repositoryId: string,
+    pullRequestId: number,
+    options: {
+      content: string;
+      threadId?: number;
+      filePath?: string;
+      lineNumber?: number;
+    },
+  ): Promise<PrThread> {
+    if (options.threadId) {
+      // Reply to existing thread
+      const raw = await this.request<RawThread>(
+        `git/repositories/${encodeURIComponent(repositoryId)}/pullrequests/${pullRequestId}/threads/${options.threadId}/comments`,
+        {
+          method: "POST",
+          body: {
+            content: options.content,
+            commentType: 1,
+          },
+          project,
+        },
+      );
+      // Return the thread after adding the comment
+      return {
+        id: raw.id,
+        status: "",
+        comments: [
+          {
+            id: raw.id,
+            content: options.content,
+            author: "",
+            publishedDate: new Date().toISOString(),
+            commentType: "text",
+          },
+        ],
+        isDeleted: false,
+        publishedDate: new Date().toISOString(),
+      };
+    }
+
+    // Create new thread
+    const body: Record<string, unknown> = {
+      comments: [{ content: options.content, commentType: 1 }],
+      status: 1, // active
+    };
+
+    if (options.filePath) {
+      body.threadContext = {
+        filePath: options.filePath,
+        rightFileStart: options.lineNumber ? { line: options.lineNumber, offset: 1 } : undefined,
+        rightFileEnd: options.lineNumber ? { line: options.lineNumber, offset: 1 } : undefined,
+      };
+    }
+
+    const raw = await this.request<RawThread>(
+      `git/repositories/${encodeURIComponent(repositoryId)}/pullrequests/${pullRequestId}/threads`,
+      {
+        method: "POST",
+        body,
+        project,
+      },
+    );
+
+    return {
+      id: raw.id,
+      status: raw.status || "",
+      comments: raw.comments.map((c) => ({
+        id: c.id,
+        content: c.content,
+        author: c.author.displayName,
+        publishedDate: c.publishedDate,
+        commentType: c.commentType,
+      })),
+      threadContext: raw.threadContext,
+      isDeleted: false,
+      publishedDate: raw.publishedDate,
+    };
+  }
+}
+
+function mapPullRequest(raw: RawPullRequest): PullRequestSummary {
+  return {
+    pullRequestId: raw.pullRequestId,
+    title: raw.title,
+    description: raw.description || "",
+    status: raw.status,
+    createdBy: raw.createdBy.displayName,
+    creationDate: raw.creationDate,
+    sourceRefName: raw.sourceRefName,
+    targetRefName: raw.targetRefName,
+    repository: raw.repository,
+    reviewers: raw.reviewers.map((r) => ({
+      displayName: r.displayName,
+      vote: r.vote,
+      isRequired: r.isRequired,
+    })),
+    isDraft: raw.isDraft,
+    url: raw.url,
+  };
+}
