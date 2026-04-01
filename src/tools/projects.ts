@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { AdoConfig } from "../auth/types.js";
 import { ProjectsClient } from "../clients/projects-client.js";
 import { topSchema, skipSchema } from "../validation/common.js";
+import { withErrorHandling } from "../utils/errors.js";
 
 export function registerProjectsTools(server: McpServer, config: AdoConfig): void {
   const client = new ProjectsClient(config);
@@ -28,7 +29,7 @@ export function registerProjectsTools(server: McpServer, config: AdoConfig): voi
         openWorldHint: true,
       },
     },
-    async ({ top, skip }) => {
+    withErrorHandling(async ({ top, skip }) => {
       const result = await client.list({ top, skip });
 
       return {
@@ -51,6 +52,6 @@ export function registerProjectsTools(server: McpServer, config: AdoConfig): voi
           },
         ],
       };
-    },
+    }),
   );
 }

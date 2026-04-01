@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { AdoConfig } from "../auth/types.js";
 import { SearchClient } from "../clients/search-client.js";
 import { projectNameSchema } from "../validation/common.js";
+import { withErrorHandling } from "../utils/errors.js";
 
 export function registerSearchTools(server: McpServer, config: AdoConfig): void {
   const client = new SearchClient(config);
@@ -46,7 +47,7 @@ export function registerSearchTools(server: McpServer, config: AdoConfig): void 
         openWorldHint: true,
       },
     },
-    async ({ searchText, project, repositoryName, top }) => {
+    withErrorHandling(async ({ searchText, project, repositoryName, top }) => {
       const result = await client.searchCode(searchText, { project, repositoryName, top });
 
       return {
@@ -71,6 +72,6 @@ export function registerSearchTools(server: McpServer, config: AdoConfig): void 
           },
         ],
       };
-    },
+    }),
   );
 }

@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { AdoConfig } from "../auth/types.js";
 import { WorkItemsClient } from "../clients/work-items-client.js";
 import { projectNameSchema, workItemIdSchema, topSchema } from "../validation/common.js";
+import { withErrorHandling } from "../utils/errors.js";
 
 export function registerWorkItemsTools(server: McpServer, config: AdoConfig): void {
   const client = new WorkItemsClient(config);
@@ -34,7 +35,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         openWorldHint: true,
       },
     },
-    async ({ query, project, top }) => {
+    withErrorHandling(async ({ query, project, top }) => {
       const results = await client.query(query, { project, top });
 
       return {
@@ -49,7 +50,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_workitems_get ---
@@ -74,7 +75,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         openWorldHint: true,
       },
     },
-    async ({ id, project, expand }) => {
+    withErrorHandling(async ({ id, project, expand }) => {
       const result = await client.get(id, { project, expand });
 
       return {
@@ -85,7 +86,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_workitems_create ---
@@ -139,7 +140,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         openWorldHint: true,
       },
     },
-    async ({ project, type, title, description, assignedTo, areaPath, iterationPath, priority, tags, additionalFields }) => {
+    withErrorHandling(async ({ project, type, title, description, assignedTo, areaPath, iterationPath, priority, tags, additionalFields }) => {
       const fields: Record<string, string | number> = {
         "System.Title": title,
       };
@@ -172,7 +173,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_workitems_update ---
@@ -197,7 +198,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         openWorldHint: true,
       },
     },
-    async ({ id, project, fields }) => {
+    withErrorHandling(async ({ id, project, fields }) => {
       const result = await client.update(id, fields, { project });
 
       return {
@@ -215,7 +216,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_workitems_list_recent ---
@@ -250,7 +251,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         openWorldHint: true,
       },
     },
-    async ({ project, type, state, assignedTo, top }) => {
+    withErrorHandling(async ({ project, type, state, assignedTo, top }) => {
       const conditions: string[] = [];
       if (type) conditions.push(`[System.WorkItemType] = '${type.replace(/'/g, "''")}'`);
       if (state) conditions.push(`[System.State] = '${state.replace(/'/g, "''")}'`);
@@ -274,6 +275,6 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
           },
         ],
       };
-    },
+    }),
   );
 }

@@ -13,6 +13,7 @@ import {
   pullRequestIdSchema,
   topSchema,
 } from "../validation/common.js";
+import { withErrorHandling } from "../utils/errors.js";
 
 export function registerGitTools(server: McpServer, config: AdoConfig): void {
   const client = new GitClient(config);
@@ -33,7 +34,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         openWorldHint: true,
       },
     },
-    async ({ project }) => {
+    withErrorHandling(async ({ project }) => {
       const repos = await client.listRepositories(project);
 
       return {
@@ -57,7 +58,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_git_list_prs ---
@@ -89,7 +90,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         openWorldHint: true,
       },
     },
-    async ({ project, repositoryId, status, creatorId, top }) => {
+    withErrorHandling(async ({ project, repositoryId, status, creatorId, top }) => {
       const prs = await client.listPullRequests(project, {
         repositoryId,
         status,
@@ -127,7 +128,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_git_get_pr ---
@@ -147,7 +148,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         openWorldHint: true,
       },
     },
-    async ({ project, repositoryId, pullRequestId }) => {
+    withErrorHandling(async ({ project, repositoryId, pullRequestId }) => {
       const pr = await client.getPullRequest(project, repositoryId, pullRequestId);
 
       return {
@@ -158,7 +159,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_git_get_pr_threads ---
@@ -178,7 +179,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         openWorldHint: true,
       },
     },
-    async ({ project, repositoryId, pullRequestId }) => {
+    withErrorHandling(async ({ project, repositoryId, pullRequestId }) => {
       const threads = await client.getPullRequestThreads(project, repositoryId, pullRequestId);
 
       // Filter out deleted threads and system threads for cleaner output
@@ -210,7 +211,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
           },
         ],
       };
-    },
+    }),
   );
 
   // --- ado_git_create_pr_comment ---
@@ -253,7 +254,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         openWorldHint: true,
       },
     },
-    async ({ project, repositoryId, pullRequestId, content, threadId, filePath, lineNumber }) => {
+    withErrorHandling(async ({ project, repositoryId, pullRequestId, content, threadId, filePath, lineNumber }) => {
       const result = await client.createComment(project, repositoryId, pullRequestId, {
         content,
         threadId,
@@ -278,6 +279,6 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
           },
         ],
       };
-    },
+    }),
   );
 }

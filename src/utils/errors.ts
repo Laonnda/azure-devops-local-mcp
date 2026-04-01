@@ -4,6 +4,7 @@
  */
 
 import { sanitizeString } from "./sanitize.js";
+import { logger } from "./logger.js";
 
 export class AdoMcpError extends Error {
   public readonly statusCode?: number;
@@ -44,6 +45,57 @@ export class ValidationError extends AdoMcpError {
     super(message, 400);
     this.name = "ValidationError";
   }
+}
+
+type McpToolResult = {
+  isError?: boolean;
+  content: Array<{ type: "text"; text: string }>;
+};
+
+type ToolHandler<T> = (input: T) => Promise<McpToolResult>;
+
+export function withErrorHandling<T>(handler: ToolHandler<T>): ToolHandler<T> {
+  return async (input: T): Promise<McpToolResult> => {
+    try {
+      return await handler(input);
+    } catch (err) {
+      let message: string;
+      let logLevel: "warn" | "error" = "error";
+
+      if (err instanceof AuthenticationError) {
+        message = err.message;
+        logLevel = "warn";
+      } else if (err instanceof NotFoundError) {
+        message = err.message;
+        logLevel = "warn";
+      } else if (err instanceof RateLimitError) {
+        message = err.message;
+        logLevel = "warn";
+      } else if (err instanceof ValidationError) {
+        message = err.message;
+        logLevel = "warn";
+      } else if (err instanceof AdoMcpError) {
+        message = err.message;
+        logLevel = "error";
+      } else if (err instanceof Error) {
+        logger.error("Unexpected error in tool handler", { name: err.name, message: sanitizeString(err.message) });
+        message = "An unexpected error occurred. Check your input and try again.";
+      } else {
+        message = "An unexpected error occurred. Check your input and try again.";
+      }
+
+      if (logLevel === "warn") {
+        logger.warn("Tool handler error", { type: err instanceof Error ? err.constructor.name : "unknown", message });
+      } else {
+        logger.error("Tool handler error", { type: err instanceof Error ? err.constructor.name : "unknown", message });
+      }
+
+      return {
+        isError: true,
+        content: [{ type: "text", text: message }],
+      };
+    }
+  };
 }
 
 export function parseAdoErrorResponse(body: unknown, statusCode: number): AdoMcpError {
