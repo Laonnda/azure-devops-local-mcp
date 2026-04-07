@@ -102,6 +102,135 @@ describe("GitClient", () => {
     expect(prs[0].reviewers[0].displayName).toBe("Jane");
   });
 
+  describe("createComment", () => {
+    const threadResponse = {
+      id: 10,
+      status: "active",
+      comments: [
+        {
+          id: 101,
+          content: "First comment",
+          author: { displayName: "Alice" },
+          publishedDate: "2026-04-07T12:00:00Z",
+          commentType: "text",
+        },
+        {
+          id: 102,
+          content: "Reply comment",
+          author: { displayName: "Bob" },
+          publishedDate: "2026-04-07T13:00:00Z",
+          commentType: "text",
+        },
+      ],
+      threadContext: undefined,
+      isDeleted: false,
+      publishedDate: "2026-04-07T12:00:00Z",
+    };
+
+    it("reply to thread returns correct comment ID (not thread ID)", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(threadResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "Reply comment",
+        threadId: 10,
+      });
+
+      expect(result.id).toBe(10);
+      expect(result.comments[1].id).toBe(102);
+      expect(result.comments[1].id).not.toBe(result.id);
+    });
+
+    it("reply to thread returns author from API response", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(threadResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "Reply comment",
+        threadId: 10,
+      });
+
+      expect(result.comments[1].author).toBe("Bob");
+    });
+
+    it("reply to thread returns timestamps from API response", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(threadResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "Reply comment",
+        threadId: 10,
+      });
+
+      expect(result.publishedDate).toBe("2026-04-07T12:00:00Z");
+      expect(result.comments[1].publishedDate).toBe("2026-04-07T13:00:00Z");
+    });
+
+    it("reply to thread returns actual thread status", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(threadResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "Reply comment",
+        threadId: 10,
+      });
+
+      expect(result.status).toBe("active");
+    });
+
+    it("create new thread returns mapped thread", async () => {
+      const newThreadResponse = {
+        id: 20,
+        status: "active",
+        comments: [
+          {
+            id: 201,
+            content: "New thread comment",
+            author: { displayName: "Charlie" },
+            publishedDate: "2026-04-07T14:00:00Z",
+            commentType: "text",
+          },
+        ],
+        threadContext: { filePath: "/src/foo.ts" },
+        isDeleted: false,
+        publishedDate: "2026-04-07T14:00:00Z",
+      };
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(newThreadResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "New thread comment",
+      });
+
+      expect(result.id).toBe(20);
+      expect(result.status).toBe("active");
+      expect(result.comments[0].id).toBe(201);
+      expect(result.comments[0].author).toBe("Charlie");
+      expect(result.threadContext?.filePath).toBe("/src/foo.ts");
+    });
+  });
+
   it("getPullRequestThreads filters correctly", async () => {
     const mockResponse = {
       value: [
