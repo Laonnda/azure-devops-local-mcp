@@ -8,6 +8,7 @@ import { registerProjectsTools } from "./tools/projects.js";
 import { registerWorkItemsTools } from "./tools/work-items.js";
 import { registerGitTools } from "./tools/git.js";
 import { registerSearchTools } from "./tools/search.js";
+import { registerWikiTools } from "./tools/wiki.js";
 
 export function createServer(config: AdoConfig): McpServer {
   const server = new McpServer(
@@ -27,6 +28,7 @@ export function createServer(config: AdoConfig): McpServer {
   registerWorkItemsTools(server, config);
   registerGitTools(server, config);
   registerSearchTools(server, config);
+  registerWikiTools(server, config);
 
   return server;
 }

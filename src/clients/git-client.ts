@@ -231,21 +231,7 @@ export class GitClient extends BaseClient {
         },
       );
       // Return the thread after adding the comment
-      return {
-        id: raw.id,
-        status: "",
-        comments: [
-          {
-            id: raw.id,
-            content: options.content,
-            author: "",
-            publishedDate: new Date().toISOString(),
-            commentType: "text",
-          },
-        ],
-        isDeleted: false,
-        publishedDate: new Date().toISOString(),
-      };
+      return mapThread(raw);
     }
 
     // Create new thread
@@ -271,21 +257,25 @@ export class GitClient extends BaseClient {
       },
     );
 
-    return {
-      id: raw.id,
-      status: raw.status || "",
-      comments: raw.comments.map((c) => ({
-        id: c.id,
-        content: c.content,
-        author: c.author.displayName,
-        publishedDate: c.publishedDate,
-        commentType: c.commentType,
-      })),
-      threadContext: raw.threadContext,
-      isDeleted: false,
-      publishedDate: raw.publishedDate,
-    };
+    return mapThread(raw);
   }
+}
+
+function mapThread(raw: RawThread): PrThread {
+  return {
+    id: raw.id,
+    status: raw.status || "",
+    comments: raw.comments.map((c) => ({
+      id: c.id,
+      content: c.content,
+      author: c.author.displayName,
+      publishedDate: c.publishedDate,
+      commentType: c.commentType,
+    })),
+    threadContext: raw.threadContext,
+    isDeleted: raw.isDeleted,
+    publishedDate: raw.publishedDate,
+  };
 }
 
 function mapPullRequest(raw: RawPullRequest): PullRequestSummary {
