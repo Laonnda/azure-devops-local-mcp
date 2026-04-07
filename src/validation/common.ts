@@ -62,3 +62,22 @@ export function assertNoPathTraversal(value: string, fieldName: string): void {
     throw new Error(`Path traversal detected in ${fieldName}`);
   }
 }
+
+/** GUID or wiki name identifier. Max 256 chars. */
+export const wikiIdSchema = z
+  .string()
+  .min(1)
+  .max(256)
+  .describe("Wiki ID (GUID) or wiki name");
+
+/** Wiki page path. Max 512 chars. Rejects path traversal patterns. */
+export const wikiPathSchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .regex(/^[a-zA-Z0-9 _.\-/]+$/, "Invalid wiki path characters")
+  .refine(
+    (val) => !val.includes("../") && !val.includes("..\\"),
+    "Path traversal patterns are not allowed in wiki paths",
+  )
+  .describe("Wiki page path (e.g. /MyPage or /Parent/Child)");
