@@ -9,6 +9,7 @@ import { registerWorkItemsTools } from "./tools/work-items.js";
 import { registerGitTools } from "./tools/git.js";
 import { registerSearchTools } from "./tools/search.js";
 import { registerWikiTools } from "./tools/wiki.js";
+import { registerPipelinesTools } from "./tools/pipelines.js";
 
 export function createServer(config: AdoConfig): McpServer {
   const server = new McpServer(
@@ -29,6 +30,7 @@ export function createServer(config: AdoConfig): McpServer {
   registerGitTools(server, config);
   registerSearchTools(server, config);
   registerWikiTools(server, config);
+  registerPipelinesTools(server, config);
 
   return server;
 }
