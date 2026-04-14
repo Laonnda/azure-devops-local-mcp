@@ -202,10 +202,9 @@ export class PipelinesClient extends BaseClient {
   async getRun(project: string, pipelineId: number, runId: number): Promise<PipelineRun> {
     const resolvedProject = this.resolveProject(project);
 
-    const raw = await this.request<RawPipelineRun>(
-      `pipelines/${pipelineId}/runs/${runId}`,
-      { project: resolvedProject },
-    );
+    const raw = await this.request<RawPipelineRun>(`pipelines/${pipelineId}/runs/${runId}`, {
+      project: resolvedProject,
+    });
 
     return mapPipelineRun(raw);
   }
@@ -239,10 +238,9 @@ export class PipelinesClient extends BaseClient {
       params.set("continuationToken", opts.continuationToken);
     }
 
-    const raw = await this.request<RawListResponse<RawBuild>>(
-      `build/builds?${params.toString()}`,
-      { project: resolvedProject },
-    );
+    const raw = await this.request<RawListResponse<RawBuild>>(`build/builds?${params.toString()}`, {
+      project: resolvedProject,
+    });
 
     return (raw.value || []).map(mapBuild);
   }
@@ -273,10 +271,11 @@ export class PipelinesClient extends BaseClient {
       body.stagesToSkip = opts.stagesToSkip;
     }
 
-    const raw = await this.request<RawPipelineRun>(
-      `pipelines/${pipelineId}/runs`,
-      { method: "POST", body, project: resolvedProject },
-    );
+    const raw = await this.request<RawPipelineRun>(`pipelines/${pipelineId}/runs`, {
+      method: "POST",
+      body,
+      project: resolvedProject,
+    });
 
     return mapPipelineRun(raw);
   }
@@ -290,10 +289,9 @@ export class PipelinesClient extends BaseClient {
   async getLogs(project: string, buildId: number): Promise<BuildLogsResult> {
     const resolvedProject = this.resolveProject(project);
 
-    const raw = await this.request<RawBuildLogsResponse>(
-      `build/builds/${buildId}/logs`,
-      { project: resolvedProject },
-    );
+    const raw = await this.request<RawBuildLogsResponse>(`build/builds/${buildId}/logs`, {
+      project: resolvedProject,
+    });
 
     const logs = (raw.value || []).map(mapBuildLog);
     const serialized = JSON.stringify(logs);

@@ -6,7 +6,7 @@
  */
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { PatAuthProvider } from "./auth/pat.js";
+import { selectAuthProvider } from "./auth/select.js";
 import type { AdoConfig } from "./auth/types.js";
 import { createServer } from "./server.js";
 import { logger } from "./utils/logger.js";
@@ -18,22 +18,26 @@ function loadConfig(): AdoConfig {
     process.exit(1);
   }
 
-  const pat = process.env.ADO_PAT;
-  if (!pat) {
-    logger.error("ADO_PAT environment variable is required");
+  let auth;
+  try {
+    auth = selectAuthProvider(process.env);
+  } catch (err) {
+    logger.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 
   return {
     orgUrl,
     defaultProject: process.env.ADO_DEFAULT_PROJECT,
-    auth: new PatAuthProvider(pat),
+    auth,
   };
 }
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const transportFlag = args.includes("--transport") ? args[args.indexOf("--transport") + 1] : "stdio";
+  const transportFlag = args.includes("--transport")
+    ? args[args.indexOf("--transport") + 1]
+    : "stdio";
 
   const config = loadConfig();
   const server = createServer(config);
@@ -41,9 +45,8 @@ async function main(): Promise<void> {
   if (transportFlag === "http") {
     // Dynamic import to avoid loading express unless needed
     const { default: express } = await import("express");
-    const { StreamableHTTPServerTransport } = await import(
-      "@modelcontextprotocol/sdk/server/streamableHttp.js"
-    );
+    const { StreamableHTTPServerTransport } =
+      await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
 
     const app = express();
     app.use(express.json());

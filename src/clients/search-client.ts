@@ -60,11 +60,12 @@ export class SearchClient extends BaseClient {
         path: r.path,
         repository: r.repository,
         project: r.project,
-        matches: r.matches?.content?.map((m) => ({
-          content: m.text,
-          charOffset: m.charOffset,
-          length: m.length,
-        })) || [],
+        matches:
+          r.matches?.content?.map((m) => ({
+            content: m.text,
+            charOffset: m.charOffset,
+            length: m.length,
+          })) || [],
       })),
       count: response.count,
     };

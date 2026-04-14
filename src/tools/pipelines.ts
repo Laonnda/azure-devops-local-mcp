@@ -117,10 +117,14 @@ export function registerPipelinesTools(server: McpServer, config: AdoConfig): vo
         "Requires vso.build PAT scope.",
       inputSchema: {
         project: projectNameSchema.optional().describe("Project name. Uses default if omitted."),
-        pipelineId: pipelineIdSchema.optional().describe("Filter to a specific pipeline definition ID"),
+        pipelineId: pipelineIdSchema
+          .optional()
+          .describe("Filter to a specific pipeline definition ID"),
         statusFilter: statusFilterSchema.optional().describe("Filter by build status"),
         top: topSchema.describe("Max results to return (default 25)"),
-        continuationToken: continuationTokenSchema.optional().describe("Token for next page of results"),
+        continuationToken: continuationTokenSchema
+          .optional()
+          .describe("Token for next page of results"),
       },
       annotations: {
         readOnlyHint: true,

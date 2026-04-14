@@ -219,9 +219,7 @@ describe("PipelinesClient.listDefinitions — response mapping", () => {
     const client = new PipelinesClient(createConfig());
     const [def] = await client.listDefinitions("TestProject");
 
-    expect(def.webUrl).toBe(
-      "https://dev.azure.com/testorg/TestProject/_apis/pipelines/1",
-    );
+    expect(def.webUrl).toBe("https://dev.azure.com/testorg/TestProject/_apis/pipelines/1");
   });
 
   it("defaults folder to backslash when absent", async () => {
@@ -566,8 +564,7 @@ describe("429 rate-limit auto-retry", () => {
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () =>
-          Promise.resolve({ count: 1, value: [makeRawPipelineDefinition()] }),
+        json: () => Promise.resolve({ count: 1, value: [makeRawPipelineDefinition()] }),
       });
     });
 

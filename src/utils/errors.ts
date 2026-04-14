@@ -78,16 +78,25 @@ export function withErrorHandling<T>(handler: ToolHandler<T>): ToolHandler<T> {
         message = err.message;
         logLevel = "error";
       } else if (err instanceof Error) {
-        logger.error("Unexpected error in tool handler", { name: err.name, message: sanitizeString(err.message) });
+        logger.error("Unexpected error in tool handler", {
+          name: err.name,
+          message: sanitizeString(err.message),
+        });
         message = "An unexpected error occurred. Check your input and try again.";
       } else {
         message = "An unexpected error occurred. Check your input and try again.";
       }
 
       if (logLevel === "warn") {
-        logger.warn("Tool handler error", { type: err instanceof Error ? err.constructor.name : "unknown", message });
+        logger.warn("Tool handler error", {
+          type: err instanceof Error ? err.constructor.name : "unknown",
+          message,
+        });
       } else {
-        logger.error("Tool handler error", { type: err instanceof Error ? err.constructor.name : "unknown", message });
+        logger.error("Tool handler error", {
+          type: err instanceof Error ? err.constructor.name : "unknown",
+          message,
+        });
       }
 
       return {

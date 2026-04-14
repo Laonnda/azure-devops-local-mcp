@@ -4,7 +4,6 @@
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 import type { AdoConfig } from "../auth/types.js";
 import { ProjectsClient } from "../clients/projects-client.js";
 import { topSchema, skipSchema } from "../validation/common.js";

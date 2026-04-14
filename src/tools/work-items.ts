@@ -27,7 +27,9 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
           .min(1)
           .max(2000)
           .describe("WIQL query string. Must be a SELECT statement."),
-        project: projectNameSchema.optional().describe("Project to query. Uses default if omitted."),
+        project: projectNameSchema
+          .optional()
+          .describe("Project to query. Uses default if omitted."),
         top: topSchema.describe("Max results (default 50, max 200)"),
       },
       annotations: {
@@ -42,11 +44,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(
-              { count: results.length, workItems: results },
-              null,
-              2,
-            ),
+            text: JSON.stringify({ count: results.length, workItems: results }, null, 2),
           },
         ],
       };
@@ -104,11 +102,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
           .max(128)
           .describe("Work item type: Bug, Task, User Story, Epic, Feature, Issue, etc."),
         title: z.string().min(1).max(256).describe("Work item title"),
-        description: z
-          .string()
-          .max(10000)
-          .optional()
-          .describe("HTML or plain text description"),
+        description: z.string().max(10000).optional().describe("HTML or plain text description"),
         assignedTo: z
           .string()
           .max(256)
@@ -140,40 +134,53 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         openWorldHint: true,
       },
     },
-    withErrorHandling(async ({ project, type, title, description, assignedTo, areaPath, iterationPath, priority, tags, additionalFields }) => {
-      const fields: Record<string, string | number> = {
-        "System.Title": title,
-      };
+    withErrorHandling(
+      async ({
+        project,
+        type,
+        title,
+        description,
+        assignedTo,
+        areaPath,
+        iterationPath,
+        priority,
+        tags,
+        additionalFields,
+      }) => {
+        const fields: Record<string, string | number> = {
+          "System.Title": title,
+        };
 
-      if (description) fields["System.Description"] = description;
-      if (assignedTo) fields["System.AssignedTo"] = assignedTo;
-      if (areaPath) fields["System.AreaPath"] = areaPath;
-      if (iterationPath) fields["System.IterationPath"] = iterationPath;
-      if (priority) fields["Microsoft.VSTS.Common.Priority"] = priority;
-      if (tags) fields["System.Tags"] = tags;
+        if (description) fields["System.Description"] = description;
+        if (assignedTo) fields["System.AssignedTo"] = assignedTo;
+        if (areaPath) fields["System.AreaPath"] = areaPath;
+        if (iterationPath) fields["System.IterationPath"] = iterationPath;
+        if (priority) fields["Microsoft.VSTS.Common.Priority"] = priority;
+        if (tags) fields["System.Tags"] = tags;
 
-      if (additionalFields) {
-        Object.assign(fields, additionalFields);
-      }
+        if (additionalFields) {
+          Object.assign(fields, additionalFields);
+        }
 
-      const result = await client.create(project, type, fields);
+        const result = await client.create(project, type, fields);
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                message: `Created ${type} #${result.id}: ${result.title}`,
-                workItem: result,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
-      };
-    }),
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  message: `Created ${type} #${result.id}: ${result.title}`,
+                  workItem: result,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      },
+    ),
   );
 
   // --- ado_workitems_update ---
@@ -255,8 +262,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
       const conditions: string[] = [];
       if (type) conditions.push(`[System.WorkItemType] = '${type.replace(/'/g, "''")}'`);
       if (state) conditions.push(`[System.State] = '${state.replace(/'/g, "''")}'`);
-      if (assignedTo)
-        conditions.push(`[System.AssignedTo] = '${assignedTo.replace(/'/g, "''")}'`);
+      if (assignedTo) conditions.push(`[System.AssignedTo] = '${assignedTo.replace(/'/g, "''")}'`);
 
       const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
       const wiql = `SELECT [System.Id], [System.Title], [System.State] FROM WorkItems ${where} ORDER BY [System.ChangedDate] DESC`;
@@ -267,11 +273,7 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(
-              { count: results.length, workItems: results },
-              null,
-              2,
-            ),
+            text: JSON.stringify({ count: results.length, workItems: results }, null, 2),
           },
         ],
       };

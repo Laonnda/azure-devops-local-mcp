@@ -293,9 +293,9 @@ describe("WikiClient.updatePage — request formation and response", () => {
     });
 
     const client = new WikiClient(createConfig());
-    await expect(
-      client.updatePage("TestProject", "my-wiki", "/Page", "# Content"),
-    ).rejects.toThrow(AuthenticationError);
+    await expect(client.updatePage("TestProject", "my-wiki", "/Page", "# Content")).rejects.toThrow(
+      AuthenticationError,
+    );
   });
 
   it("propagates NotFoundError on 404", async () => {

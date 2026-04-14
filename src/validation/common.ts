@@ -20,18 +20,10 @@ export const repositoryIdSchema = z
   .describe("Repository ID (GUID) or name");
 
 /** Positive integer ID */
-export const workItemIdSchema = z
-  .number()
-  .int()
-  .positive()
-  .describe("Work item ID");
+export const workItemIdSchema = z.number().int().positive().describe("Work item ID");
 
 /** Positive integer PR ID */
-export const pullRequestIdSchema = z
-  .number()
-  .int()
-  .positive()
-  .describe("Pull request ID");
+export const pullRequestIdSchema = z.number().int().positive().describe("Pull request ID");
 
 /** Pagination: top */
 export const topSchema = z
@@ -43,12 +35,7 @@ export const topSchema = z
   .describe("Maximum number of results to return (max 200)");
 
 /** Pagination: skip */
-export const skipSchema = z
-  .number()
-  .int()
-  .min(0)
-  .default(0)
-  .describe("Number of results to skip");
+export const skipSchema = z.number().int().min(0).default(0).describe("Number of results to skip");
 
 /** Continuation token */
 export const continuationTokenSchema = z
@@ -64,11 +51,7 @@ export function assertNoPathTraversal(value: string, fieldName: string): void {
 }
 
 /** GUID or wiki name identifier. Max 256 chars. */
-export const wikiIdSchema = z
-  .string()
-  .min(1)
-  .max(256)
-  .describe("Wiki ID (GUID) or wiki name");
+export const wikiIdSchema = z.string().min(1).max(256).describe("Wiki ID (GUID) or wiki name");
 
 /** Wiki page path. Max 512 chars. Rejects path traversal patterns. */
 export const wikiPathSchema = z

@@ -328,7 +328,8 @@ describe("WikiClient.updatePage", () => {
     const client = new WikiClient(createConfig());
     await client.updatePage("TestProject", "my-wiki", "/Page", "# Content");
 
-    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
     expect(calledOptions.method).toBe("PUT");
   });
 
@@ -342,7 +343,8 @@ describe("WikiClient.updatePage", () => {
     const client = new WikiClient(createConfig());
     await client.updatePage("TestProject", "my-wiki", "/Page", "# New Content");
 
-    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
     const body = JSON.parse(calledOptions.body as string) as Record<string, unknown>;
     expect(body.content).toBe("# New Content");
   });
@@ -357,7 +359,8 @@ describe("WikiClient.updatePage", () => {
     const client = new WikiClient(createConfig());
     await client.updatePage("TestProject", "my-wiki", "/Page", "# Content", "Update docs");
 
-    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
     const body = JSON.parse(calledOptions.body as string) as Record<string, unknown>;
     expect(body.gitVersionDescriptor).toEqual({ commitMessage: "Update docs" });
   });
@@ -372,7 +375,8 @@ describe("WikiClient.updatePage", () => {
     const client = new WikiClient(createConfig());
     await client.updatePage("TestProject", "my-wiki", "/Page", "# Content");
 
-    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
     const body = JSON.parse(calledOptions.body as string) as Record<string, unknown>;
     expect(body.gitVersionDescriptor).toBeUndefined();
   });
@@ -415,9 +419,9 @@ describe("WikiClient.updatePage", () => {
     });
 
     const client = new WikiClient(createConfig());
-    await expect(
-      client.updatePage("TestProject", "my-wiki", "/Page", "# Content"),
-    ).rejects.toThrow(AuthenticationError);
+    await expect(client.updatePage("TestProject", "my-wiki", "/Page", "# Content")).rejects.toThrow(
+      AuthenticationError,
+    );
   });
 
   it("throws NotFoundError on 404", async () => {

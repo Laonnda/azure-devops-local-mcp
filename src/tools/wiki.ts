@@ -7,7 +7,13 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { AdoConfig } from "../auth/types.js";
 import { WikiClient } from "../clients/wiki-client.js";
-import { projectNameSchema, wikiIdSchema, wikiPathSchema, topSchema, skipSchema } from "../validation/common.js";
+import {
+  projectNameSchema,
+  wikiIdSchema,
+  wikiPathSchema,
+  topSchema,
+  skipSchema,
+} from "../validation/common.js";
 import { withErrorHandling } from "../utils/errors.js";
 
 export function registerWikiTools(server: McpServer, config: AdoConfig): void {

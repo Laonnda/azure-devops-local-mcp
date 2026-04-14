@@ -44,9 +44,9 @@ describe("WIQL validation", () => {
     const config = createConfig();
     const client = new WorkItemsClient(config);
 
-    await expect(
-      client.query("; DROP TABLE WorkItems", { project: "Test" }),
-    ).rejects.toThrow("blocked");
+    await expect(client.query("; DROP TABLE WorkItems", { project: "Test" })).rejects.toThrow(
+      "blocked",
+    );
   });
 
   it("rejects queries exceeding max length", async () => {
@@ -55,8 +55,6 @@ describe("WIQL validation", () => {
     const client = new WorkItemsClient(config);
 
     const longQuery = "SELECT [System.Id] FROM WorkItems WHERE " + "x".repeat(2000);
-    await expect(
-      client.query(longQuery, { project: "Test" }),
-    ).rejects.toThrow("maximum length");
+    await expect(client.query(longQuery, { project: "Test" })).rejects.toThrow("maximum length");
   });
 });

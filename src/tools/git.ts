@@ -73,16 +73,14 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         project: projectNameSchema.describe("Project to list PRs from"),
         repositoryId: repositoryIdSchema
           .optional()
-          .describe("Repository ID or name. If omitted, lists PRs across all repos in the project."),
+          .describe(
+            "Repository ID or name. If omitted, lists PRs across all repos in the project.",
+          ),
         status: z
           .enum(["active", "completed", "abandoned", "all"])
           .default("active")
           .describe("Filter by PR status. Defaults to 'active'."),
-        creatorId: z
-          .string()
-          .max(256)
-          .optional()
-          .describe("Filter by creator's ID (GUID)"),
+        creatorId: z.string().max(256).optional().describe("Filter by creator's ID (GUID)"),
         top: topSchema.describe("Max results (default 50, max 200)"),
       },
       annotations: {
@@ -226,11 +224,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         project: projectNameSchema.describe("Project containing the PR"),
         repositoryId: repositoryIdSchema.describe("Repository ID or name"),
         pullRequestId: pullRequestIdSchema.describe("Pull request ID"),
-        content: z
-          .string()
-          .min(1)
-          .max(10000)
-          .describe("Comment text (supports markdown)"),
+        content: z.string().min(1).max(10000).describe("Comment text (supports markdown)"),
         threadId: z
           .number()
           .int()
@@ -254,31 +248,33 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         openWorldHint: true,
       },
     },
-    withErrorHandling(async ({ project, repositoryId, pullRequestId, content, threadId, filePath, lineNumber }) => {
-      const result = await client.createComment(project, repositoryId, pullRequestId, {
-        content,
-        threadId,
-        filePath,
-        lineNumber,
-      });
+    withErrorHandling(
+      async ({ project, repositoryId, pullRequestId, content, threadId, filePath, lineNumber }) => {
+        const result = await client.createComment(project, repositoryId, pullRequestId, {
+          content,
+          threadId,
+          filePath,
+          lineNumber,
+        });
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                message: threadId
-                  ? `Replied to thread #${threadId}`
-                  : `Created new comment thread #${result.id}`,
-                thread: result,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
-      };
-    }),
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  message: threadId
+                    ? `Replied to thread #${threadId}`
+                    : `Created new comment thread #${result.id}`,
+                  thread: result,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      },
+    ),
   );
 }
