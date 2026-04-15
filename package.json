@@ -7,7 +7,9 @@
   "bin": {
     "ado-mcp": "dist/index.js"
   },
+  "files": ["dist/", "README.md", "LICENSE", ".env.example"],
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
@@ -35,6 +37,12 @@
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Laonnda/ado-mcp.git"
+  },
+  "keywords": ["mcp", "azure-devops", "claude", "ai"],
+  "homepage": "https://github.com/Laonnda/ado-mcp",
   "engines": {
     "node": ">=20"
   },
