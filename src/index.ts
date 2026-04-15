@@ -35,9 +35,16 @@ function loadConfig(): AdoConfig {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const transportFlag = args.includes("--transport")
-    ? args[args.indexOf("--transport") + 1]
-    : "stdio";
+  const transportIndex = args.indexOf("--transport");
+  if (transportIndex >= 0 && transportIndex === args.length - 1) {
+    logger.error("--transport requires a value: stdio or http");
+    process.exit(1);
+  }
+  const transportFlag = transportIndex >= 0 ? args[transportIndex + 1] : "stdio";
+  if (!["stdio", "http"].includes(transportFlag)) {
+    logger.error(`Unknown transport: ${transportFlag}. Use stdio or http.`);
+    process.exit(1);
+  }
 
   const config = loadConfig();
   const server = createServer(config);
@@ -67,6 +74,10 @@ async function main(): Promise<void> {
     });
 
     const port = parseInt(process.env.PORT || "3100", 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      logger.error("PORT must be a number between 1 and 65535");
+      process.exit(1);
+    }
     app.listen(port, () => {
       logger.info(`ado-mcp HTTP server listening on port ${port}`);
     });
