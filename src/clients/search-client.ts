@@ -32,6 +32,10 @@ export class SearchClient extends BaseClient {
     super(config);
   }
 
+  protected override get orgUrl(): string {
+    return super.orgUrl.replace("dev.azure.com", "almsearch.dev.azure.com");
+  }
+
   async searchCode(
     searchText: string,
     options: { project?: string; repositoryName?: string; top?: number } = {},
