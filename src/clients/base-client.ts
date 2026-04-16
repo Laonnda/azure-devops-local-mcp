@@ -9,7 +9,7 @@ import { logger } from "../utils/logger.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
 import { sanitizeObject } from "../utils/sanitize.js";
 
-const API_VERSION = "7.2";
+const API_VERSION = "7.1";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 3;
 
