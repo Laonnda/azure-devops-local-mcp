@@ -14,7 +14,7 @@ import {
   topSchema,
   guidSchema,
 } from "../validation/common.js";
-import { withErrorHandling } from "../utils/errors.js";
+import { withErrorHandling, ValidationError } from "../utils/errors.js";
 
 export function registerGitTools(server: McpServer, config: AdoConfig): void {
   const client = new GitClient(config);
@@ -220,8 +220,11 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
     "ado_git_create_pr_comment",
     {
       description:
-        "Add a comment to a pull request. Either reply to an existing thread (provide threadId) " +
-        "or create a new thread. For inline code comments, provide filePath and optionally lineNumber. " +
+        "Add a comment to a pull request. " +
+        "To reply to an existing thread, provide threadId (do not provide filePath). " +
+        "To create a new general thread, provide only content. " +
+        "To create an inline code comment, provide filePath; optionally add lineNumber (start) " +
+        "and endLineNumber (end) for a multi-line range, and side ('right' for new file, 'left' for old). " +
         "Requires vso.code_write PAT scope.",
       inputSchema: {
         project: projectNameSchema.describe("Project containing the PR"),
@@ -233,18 +236,37 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
           .int()
           .positive()
           .optional()
-          .describe("Thread ID to reply to. If omitted, creates a new thread."),
+          .describe("Thread ID to reply to. Mutually exclusive with filePath."),
         filePath: z
           .string()
           .max(500)
           .optional()
-          .describe("File path for inline comment (e.g. '/src/index.ts'). Only for new threads."),
+          .describe(
+            "File path for an inline comment (e.g. '/src/index.ts'). " +
+              "Only for new threads; mutually exclusive with threadId.",
+          ),
         lineNumber: z
           .number()
           .int()
           .positive()
           .optional()
-          .describe("Line number for inline comment. Only used with filePath."),
+          .describe("Start line number for the inline comment range. Requires filePath."),
+        endLineNumber: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe(
+            "End line number for a multi-line inline comment. " +
+              "Defaults to lineNumber when omitted. Requires filePath.",
+          ),
+        side: z
+          .enum(["right", "left"])
+          .default("right")
+          .describe(
+            "Diff side for the inline comment: 'right' (new file, default) or 'left' (old file). " +
+              "Only used with filePath.",
+          ),
       },
       annotations: {
         readOnlyHint: false,
@@ -252,12 +274,28 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
       },
     },
     withErrorHandling(
-      async ({ project, repositoryId, pullRequestId, content, threadId, filePath, lineNumber }) => {
+      async ({
+        project,
+        repositoryId,
+        pullRequestId,
+        content,
+        threadId,
+        filePath,
+        lineNumber,
+        endLineNumber,
+        side,
+      }) => {
+        if (threadId !== undefined && filePath !== undefined) {
+          throw new ValidationError("threadId and filePath are mutually exclusive: use threadId to reply to an existing thread, or filePath to create an inline comment on a new thread.");
+        }
+
         const result = await client.createComment(project, repositoryId, pullRequestId, {
           content,
           threadId,
           filePath,
           lineNumber,
+          endLineNumber,
+          side,
         });
 
         return {

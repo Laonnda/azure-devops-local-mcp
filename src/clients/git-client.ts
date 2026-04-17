@@ -217,6 +217,8 @@ export class GitClient extends BaseClient {
       threadId?: number;
       filePath?: string;
       lineNumber?: number;
+      endLineNumber?: number;
+      side?: "right" | "left";
     },
   ): Promise<PrThread> {
     if (options.threadId) {
@@ -232,7 +234,6 @@ export class GitClient extends BaseClient {
           project,
         },
       );
-      // Return the thread after adding the comment
       return mapThread(raw);
     }
 
@@ -243,11 +244,24 @@ export class GitClient extends BaseClient {
     };
 
     if (options.filePath) {
-      body.threadContext = {
-        filePath: options.filePath,
-        rightFileStart: options.lineNumber ? { line: options.lineNumber, offset: 1 } : undefined,
-        rightFileEnd: options.lineNumber ? { line: options.lineNumber, offset: 1 } : undefined,
-      };
+      const side = options.side ?? "right";
+      const startLine = options.lineNumber;
+      const endLine = options.endLineNumber ?? startLine;
+      const startPos = startLine ? { line: startLine, offset: 1 } : undefined;
+      const endPos = endLine ? { line: endLine, offset: 1 } : undefined;
+
+      body.threadContext =
+        side === "left"
+          ? {
+              filePath: options.filePath,
+              leftFileStart: startPos,
+              leftFileEnd: endPos,
+            }
+          : {
+              filePath: options.filePath,
+              rightFileStart: startPos,
+              rightFileEnd: endPos,
+            };
     }
 
     const raw = await this.request<RawThread>(

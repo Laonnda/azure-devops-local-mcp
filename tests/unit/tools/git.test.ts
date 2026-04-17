@@ -355,6 +355,120 @@ describe("GitClient", () => {
   });
 });
 
+describe("GitClient.createComment — MED-4 schema improvements", () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  const emptyThread = {
+    id: 5,
+    status: "active",
+    comments: [
+      {
+        id: 50,
+        content: "test",
+        author: { displayName: "Dev" },
+        publishedDate: "2026-04-17T00:00:00Z",
+        commentType: "text",
+      },
+    ],
+    threadContext: undefined,
+    isDeleted: false,
+    publishedDate: "2026-04-17T00:00:00Z",
+  };
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(emptyThread),
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("sends rightFileStart/rightFileEnd for right-side single-line comment", async () => {
+    const client = new GitClient(createConfig());
+    await client.createComment("TestProject", "repo-1", 1, {
+      content: "looks good",
+      filePath: "/src/foo.ts",
+      lineNumber: 10,
+    });
+
+    const body = JSON.parse(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string,
+    ) as Record<string, unknown>;
+    const ctx = body.threadContext as Record<string, unknown>;
+    expect(ctx.filePath).toBe("/src/foo.ts");
+    expect(ctx.rightFileStart).toEqual({ line: 10, offset: 1 });
+    expect(ctx.rightFileEnd).toEqual({ line: 10, offset: 1 });
+    expect(ctx.leftFileStart).toBeUndefined();
+  });
+
+  it("sends leftFileStart/leftFileEnd for left-side comment", async () => {
+    const client = new GitClient(createConfig());
+    await client.createComment("TestProject", "repo-1", 1, {
+      content: "old code issue",
+      filePath: "/src/foo.ts",
+      lineNumber: 5,
+      side: "left",
+    });
+
+    const body = JSON.parse(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string,
+    ) as Record<string, unknown>;
+    const ctx = body.threadContext as Record<string, unknown>;
+    expect(ctx.leftFileStart).toEqual({ line: 5, offset: 1 });
+    expect(ctx.leftFileEnd).toEqual({ line: 5, offset: 1 });
+    expect(ctx.rightFileStart).toBeUndefined();
+  });
+
+  it("sends start and end for a multi-line range", async () => {
+    const client = new GitClient(createConfig());
+    await client.createComment("TestProject", "repo-1", 1, {
+      content: "this block",
+      filePath: "/src/foo.ts",
+      lineNumber: 10,
+      endLineNumber: 20,
+    });
+
+    const body = JSON.parse(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string,
+    ) as Record<string, unknown>;
+    const ctx = body.threadContext as Record<string, unknown>;
+    expect(ctx.rightFileStart).toEqual({ line: 10, offset: 1 });
+    expect(ctx.rightFileEnd).toEqual({ line: 20, offset: 1 });
+  });
+});
+
+describe("ado_git_create_pr_comment tool — mutual exclusion (MED-4)", () => {
+  it("rejects when both threadId and filePath are provided", async () => {
+    const server = new McpServer({ name: "test", version: "0.0.1" });
+    const config = createConfig();
+    registerGitTools(server, config);
+
+    const tool = (
+      server as unknown as {
+        _registeredTools: Record<string, { inputSchema: { parse: (v: unknown) => unknown }; handler: (v: unknown) => Promise<unknown> }>;
+      }
+    )._registeredTools["ado_git_create_pr_comment"];
+
+    const result = await tool.handler({
+      project: "TestProject",
+      repositoryId: "repo-1",
+      pullRequestId: 1,
+      content: "hi",
+      threadId: 5,
+      filePath: "/src/foo.ts",
+      side: "right",
+    }) as { isError: boolean; content: { text: string }[] };
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/mutually exclusive/);
+  });
+});
+
 describe("guidSchema (MED-3 — creatorId GUID validation)", () => {
   it("accepts a valid lowercase GUID", () => {
     expect(() =>
