@@ -1,3 +1,4 @@
+import { RateLimiter } from "../../../src/utils/rate-limiter.js";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { WikiClient } from "../../../src/clients/wiki-client.js";
 import type { AdoConfig } from "../../../src/auth/types.js";
@@ -10,6 +11,7 @@ function createConfig(): AdoConfig {
     auth: {
       getAuthHeader: vi.fn().mockResolvedValue("Basic dGVzdDp0ZXN0"),
     },
+    rateLimiter: new RateLimiter(60),
   };
 }
 

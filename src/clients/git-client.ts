@@ -4,7 +4,10 @@
  */
 
 import type { AdoConfig } from "../auth/types.js";
+import { truncateString } from "../utils/truncate.js";
 import { BaseClient } from "./base-client.js";
+
+const COMMENT_MAX_CHARS = 500;
 
 export interface AdoRepository {
   id: string;
@@ -291,7 +294,7 @@ function mapThread(raw: RawThread): PrThread {
     status: raw.status || "",
     comments: raw.comments.map((c) => ({
       id: c.id,
-      content: c.content,
+      content: truncateString(c.content || "", COMMENT_MAX_CHARS),
       author: c.author.displayName,
       publishedDate: c.publishedDate,
       commentType: c.commentType,

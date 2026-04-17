@@ -31,7 +31,7 @@ export class BaseClient {
 
   constructor(config: AdoConfig) {
     this.config = config;
-    this.rateLimiter = new RateLimiter(60);
+    this.rateLimiter = config.rateLimiter;
   }
 
   protected get orgUrl(): string {

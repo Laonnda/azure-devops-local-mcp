@@ -11,9 +11,4 @@ export default defineConfig({
       exclude: ["src/index.ts"],
     },
   },
-  resolve: {
-    alias: {
-      "@": "./src",
-    },
-  },
 });

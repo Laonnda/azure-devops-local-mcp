@@ -10,6 +10,7 @@ import { selectAuthProvider } from "./auth/select.js";
 import type { AdoConfig } from "./auth/types.js";
 import { createServer } from "./server.js";
 import { logger } from "./utils/logger.js";
+import { RateLimiter } from "./utils/rate-limiter.js";
 
 function loadConfig(): AdoConfig {
   const orgUrl = process.env.ADO_ORG_URL;
@@ -26,10 +27,14 @@ function loadConfig(): AdoConfig {
     process.exit(1);
   }
 
+  const rateLimit = parseInt(process.env.ADO_RATE_LIMIT ?? "60", 10);
+  const rateLimiter = new RateLimiter(isNaN(rateLimit) || rateLimit < 1 ? 60 : rateLimit);
+
   return {
     orgUrl,
     defaultProject: process.env.ADO_DEFAULT_PROJECT,
     auth,
+    rateLimiter,
   };
 }
 
@@ -78,14 +83,30 @@ async function main(): Promise<void> {
       logger.error("PORT must be a number between 1 and 65535");
       process.exit(1);
     }
-    app.listen(port, () => {
+    const httpServer = app.listen(port, () => {
       logger.info(`ado-mcp HTTP server listening on port ${port}`);
     });
+
+    const shutdown = async () => {
+      logger.info("Shutting down gracefully...");
+      httpServer.close();
+      process.exit(0);
+    };
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
   } else {
     // Default: stdio transport for Claude Code
     const transport = new StdioServerTransport();
     await server.connect(transport);
     logger.info("ado-mcp started on stdio transport");
+
+    const shutdown = async () => {
+      logger.info("Shutting down gracefully...");
+      await transport.close();
+      process.exit(0);
+    };
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
   }
 }
 

@@ -5,7 +5,10 @@
 
 import type { AdoConfig } from "../auth/types.js";
 import { ValidationError } from "../utils/errors.js";
+import { truncateString } from "../utils/truncate.js";
 import { BaseClient } from "./base-client.js";
+
+const DESCRIPTION_MAX_CHARS = 500;
 
 export interface WorkItemSummary {
   id: number;
@@ -60,9 +63,6 @@ interface WorkItemsBatchResponse {
   count: number;
 }
 
-/** Patterns that should not appear in WIQL queries */
-const WIQL_BLOCKED_PATTERNS = [/;\s*(DROP|DELETE|INSERT|UPDATE|ALTER|CREATE|EXEC)/i];
-
 /**
  * Friendly link-type names mapped to Azure DevOps relation reference names.
  * `parent`/`child` are the hierarchy links the board uses for Feature->Task etc.
@@ -94,13 +94,15 @@ function extractWorkItemIdFromUrl(url: string): number | null {
 const RELATIONS_API_VERSION = "7.1";
 
 function validateWiql(query: string): void {
-  for (const pattern of WIQL_BLOCKED_PATTERNS) {
-    if (pattern.test(query)) {
-      throw new ValidationError("WIQL query contains blocked SQL-like patterns");
-    }
-  }
   if (query.length > 2000) {
     throw new ValidationError("WIQL query exceeds maximum length of 2000 characters");
+  }
+  const trimmed = query.trimStart();
+  if (!/^SELECT\s/i.test(trimmed)) {
+    throw new ValidationError("WIQL query must start with SELECT");
+  }
+  if (!/FROM\s+WorkItems\b/i.test(trimmed)) {
+    throw new ValidationError("WIQL query must query FROM WorkItems");
   }
 }
 
@@ -151,7 +153,7 @@ function mapWorkItemDetail(raw: WorkItemResponse): WorkItemDetail {
   const f = raw.fields;
   return {
     ...mapWorkItem(raw),
-    description: String(f["System.Description"] || ""),
+    description: truncateString(String(f["System.Description"] || ""), DESCRIPTION_MAX_CHARS),
     reason: String(f["System.Reason"] || ""),
     priority: Number(f["Microsoft.VSTS.Common.Priority"] || 0),
     tags: String(f["System.Tags"] || ""),

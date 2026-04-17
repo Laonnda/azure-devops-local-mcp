@@ -29,7 +29,7 @@ npm run lint:fix     # auto-fix lint issues
   - Types/interfaces: `PascalCase`
   - Functions/variables: `camelCase`
   - Constants: `UPPER_SNAKE_CASE`
-- **Imports:** Use path aliases (`@/tools/...`, `@/clients/...`) configured in tsconfig
+- **Imports:** Use relative paths (`../auth/types.js`)
 - **Error handling:** Throw typed errors that extend `McpError`. Never swallow errors silently.
 - **No `any`:** Use `unknown` + type guards instead. The `any` type is banned in eslint config.
 

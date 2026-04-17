@@ -8,8 +8,6 @@ const PATTERNS: RegExp[] = [
   /Basic\s+[A-Za-z0-9+/=]{20,}/g,
   // Bearer tokens
   /Bearer\s+[A-Za-z0-9._~+/=-]{20,}/g,
-  // Raw PAT-like strings (Azure DevOps PATs are typically 52+ chars)
-  /[a-z0-9]{52,}/gi,
   // Connection strings with passwords
   /Password=[^;]+/gi,
   // Azure DevOps PAT patterns in URLs

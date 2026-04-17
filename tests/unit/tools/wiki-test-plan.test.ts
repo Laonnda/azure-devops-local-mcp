@@ -1,3 +1,4 @@
+import { RateLimiter } from "../../../src/utils/rate-limiter.js";
 /**
  * 1:1 vitest port of WIKI_TOOLS_TEST_PLAN.md, cases 1–15.
  * Source of truth is the plan doc — do not modify cases here without
@@ -20,6 +21,7 @@ function createConfig(overrides: Partial<AdoConfig> = {}): AdoConfig {
     orgUrl: "https://dev.azure.com/testorg",
     defaultProject: "TestProject",
     auth: { getAuthHeader: vi.fn().mockResolvedValue("Basic dGVzdDp0ZXN0") },
+    rateLimiter: new RateLimiter(60),
     ...overrides,
   };
 }

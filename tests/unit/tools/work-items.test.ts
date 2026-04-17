@@ -1,3 +1,4 @@
+import { RateLimiter } from "../../../src/utils/rate-limiter.js";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AdoConfig } from "../../../src/auth/types.js";
@@ -10,6 +11,7 @@ function createConfig(): AdoConfig {
     auth: {
       getAuthHeader: vi.fn().mockResolvedValue("Basic dGVzdDp0ZXN0"),
     },
+    rateLimiter: new RateLimiter(60),
   };
 }
 
@@ -152,15 +154,40 @@ describe("WIQL validation", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("rejects queries with SQL injection patterns", async () => {
-    // The WorkItemsClient validates WIQL internally
+  it("rejects queries that do not start with SELECT", async () => {
     const { WorkItemsClient } = await import("../../../src/clients/work-items-client.js");
     const config = createConfig();
     const client = new WorkItemsClient(config);
 
-    await expect(client.query("; DROP TABLE WorkItems", { project: "Test" })).rejects.toThrow(
-      "blocked",
+    await expect(client.query("DELETE FROM WorkItems", { project: "Test" })).rejects.toThrow(
+      "must start with SELECT",
     );
+  });
+
+  it("rejects queries without FROM WorkItems", async () => {
+    const { WorkItemsClient } = await import("../../../src/clients/work-items-client.js");
+    const config = createConfig();
+    const client = new WorkItemsClient(config);
+
+    await expect(
+      client.query("SELECT [System.Id] FROM Tasks", { project: "Test" }),
+    ).rejects.toThrow("FROM WorkItems");
+  });
+
+  it("accepts valid WIQL with words like DELETE in field values", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: () => Promise.resolve({ queryType: "flat", workItems: [] }),
+    });
+    const { WorkItemsClient } = await import("../../../src/clients/work-items-client.js");
+    const client = new WorkItemsClient(createConfig());
+    const result = await client.query(
+      "SELECT [System.Id] FROM WorkItems WHERE [System.Title] CONTAINS 'DELETE'",
+      { project: "Test" },
+    );
+    expect(result.items).toHaveLength(0);
   });
 
   it("rejects queries exceeding max length", async () => {

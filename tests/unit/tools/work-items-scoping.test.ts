@@ -1,3 +1,4 @@
+import { RateLimiter } from "../../../src/utils/rate-limiter.js";
 /**
  * Regression tests for work-item project scoping (Bug 1) and count accuracy (Bug 2).
  * Cases 1-13 map 1:1 to WORKITEMS_TOOLS_TEST_PLAN.md.
@@ -17,6 +18,7 @@ function createConfig(overrides: Partial<AdoConfig> = {}): AdoConfig {
     orgUrl: "https://dev.azure.com/testorg",
     defaultProject: "TestProject",
     auth: { getAuthHeader: vi.fn().mockResolvedValue("Basic dGVzdDp0ZXN0") },
+    rateLimiter: new RateLimiter(60),
     ...overrides,
   };
 }

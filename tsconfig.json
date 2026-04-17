@@ -14,9 +14,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    },
     "baseUrl": "."
   },
   "include": ["src/**/*"],

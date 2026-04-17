@@ -1,5 +1,7 @@
 # ado-mcp
 
+[![CI](https://github.com/Laonnda/ado-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Laonnda/ado-mcp/actions/workflows/ci.yml)
+
 MCP (Model Context Protocol) server for Azure DevOps. Connects Claude Code and Claude Chat to your Azure DevOps organisation — query work items, review pull requests, trigger pipelines, search code, and manage wikis using plain language.
 
 ## Supported areas

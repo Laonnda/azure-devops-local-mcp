@@ -1,3 +1,4 @@
+import { RateLimiter } from "../../../src/utils/rate-limiter.js";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { SearchClient } from "../../../src/clients/search-client.js";
 import type { AdoConfig } from "../../../src/auth/types.js";
@@ -7,6 +8,7 @@ function createConfig(): AdoConfig {
     orgUrl: "https://dev.azure.com/testorg",
     defaultProject: "TestProject",
     auth: { getAuthHeader: vi.fn().mockResolvedValue("Basic dGVzdDp0ZXN0") },
+    rateLimiter: new RateLimiter(60),
   };
 }
 
