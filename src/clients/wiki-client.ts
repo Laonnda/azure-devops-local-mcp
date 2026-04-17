@@ -80,6 +80,9 @@ export class WikiClient extends BaseClient {
    * Throws ValidationError if no projectWiki exists (listing available codeWikis in the message).
    */
   async resolveProjectWikiId(project: string): Promise<string> {
+    if (!project) {
+      throw new ValidationError("project is required when wikiId is not provided");
+    }
     const { wikis } = await this.listWikis(project);
     const projectWikis = wikis.filter((w) => w.type === "projectWiki");
     const codeWikis = wikis.filter((w) => w.type === "codeWiki");
