@@ -64,6 +64,7 @@ export function registerSearchTools(server: McpServer, config: AdoConfig): void 
                   file: r.fileName,
                   path: r.path,
                   repository: r.repository.name,
+                  repositoryId: r.repository.id,
                   project: r.project.name,
                   matchCount: r.matches.length,
                   matches: r.matches.slice(0, 5),

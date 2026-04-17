@@ -17,6 +17,7 @@ export interface WorkItemSummary {
   iterationPath: string;
   changedDate: string;
   url: string;
+  webUrl: string;
 }
 
 export interface WorkItemDetail extends WorkItemSummary {
@@ -51,6 +52,7 @@ interface WorkItemResponse {
   url: string;
   fields: Record<string, unknown>;
   relations?: WorkItemRelation[];
+  _links?: { html?: { href: string } };
 }
 
 interface WorkItemsBatchResponse {
@@ -111,6 +113,7 @@ function mapWorkItem(raw: WorkItemResponse): WorkItemSummary {
     iterationPath: String(f["System.IterationPath"] || ""),
     changedDate: String(f["System.ChangedDate"] || ""),
     url: raw.url,
+    webUrl: raw._links?.html?.href ?? "",
   };
 }
 

@@ -28,6 +28,7 @@ export interface PullRequestSummary {
   reviewers: PrReviewer[];
   isDraft: boolean;
   url: string;
+  webUrl: string;
 }
 
 export interface PrReviewer {
@@ -91,6 +92,7 @@ interface RawPullRequest {
   reviewers: { displayName: string; id?: string; uniqueName?: string; vote: number; isRequired: boolean }[];
   isDraft: boolean;
   url: string;
+  _links?: { web?: { href: string } };
 }
 
 interface ThreadsResponse {
@@ -318,5 +320,6 @@ function mapPullRequest(raw: RawPullRequest): PullRequestSummary {
     })),
     isDraft: raw.isDraft,
     url: raw.url,
+    webUrl: raw._links?.web?.href ?? raw.url,
   };
 }

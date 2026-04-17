@@ -27,6 +27,117 @@ describe("Work Items Tool Registration", () => {
   });
 });
 
+describe("WorkItemsClient — webUrl mapping", () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("maps _links.html.href to webUrl on work item", async () => {
+    const { WorkItemsClient } = await import("../../../src/clients/work-items-client.js");
+    const config = createConfig();
+    const client = new WorkItemsClient(config);
+
+    // First call: WIQL response
+    // Second call: batch GET
+    let call = 0;
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      call++;
+      if (call === 1) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              queryType: "flat",
+              workItems: [{ id: 1, url: "https://dev.azure.com/_apis/wit/workitems/1" }],
+            }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            count: 1,
+            value: [
+              {
+                id: 1,
+                rev: 1,
+                url: "https://dev.azure.com/_apis/wit/workitems/1",
+                fields: {
+                  "System.Title": "My Bug",
+                  "System.State": "Active",
+                  "System.WorkItemType": "Bug",
+                  "System.ChangedDate": "2026-04-17T00:00:00Z",
+                },
+                _links: {
+                  html: { href: "https://dev.azure.com/testorg/TestProject/_workitems/edit/1" },
+                },
+              },
+            ],
+          }),
+      });
+    });
+
+    const result = await client.query("SELECT [System.Id] FROM WorkItems", { project: "TestProject" });
+    expect(result.items[0].webUrl).toBe(
+      "https://dev.azure.com/testorg/TestProject/_workitems/edit/1",
+    );
+  });
+
+  it("webUrl defaults to empty string when _links absent", async () => {
+    const { WorkItemsClient } = await import("../../../src/clients/work-items-client.js");
+    const config = createConfig();
+    const client = new WorkItemsClient(config);
+
+    let call = 0;
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      call++;
+      if (call === 1) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              queryType: "flat",
+              workItems: [{ id: 2, url: "https://dev.azure.com/_apis/wit/workitems/2" }],
+            }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            count: 1,
+            value: [
+              {
+                id: 2,
+                rev: 1,
+                url: "https://dev.azure.com/_apis/wit/workitems/2",
+                fields: {
+                  "System.Title": "Task",
+                  "System.State": "New",
+                  "System.WorkItemType": "Task",
+                  "System.ChangedDate": "2026-04-17T00:00:00Z",
+                },
+              },
+            ],
+          }),
+      });
+    });
+
+    const result = await client.query("SELECT [System.Id] FROM WorkItems", { project: "TestProject" });
+    expect(result.items[0].webUrl).toBe("");
+  });
+});
+
 describe("WIQL validation", () => {
   let originalFetch: typeof globalThis.fetch;
 

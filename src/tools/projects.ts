@@ -18,7 +18,7 @@ export function registerProjectsTools(server: McpServer, config: AdoConfig): voi
       description:
         "List all projects in the Azure DevOps organization. " +
         "Use this first to discover available projects before using other tools. " +
-        "Returns project name, ID, description, and state.",
+        "Returns project name, ID, description, state, url, and lastUpdateTime.",
       inputSchema: {
         top: topSchema.describe("Max projects to return (default 50, max 200)"),
         skip: skipSchema.describe("Number of projects to skip for pagination"),
@@ -43,6 +43,8 @@ export function registerProjectsTools(server: McpServer, config: AdoConfig): voi
                   name: p.name,
                   description: p.description,
                   state: p.state,
+                  url: p.url,
+                  lastUpdateTime: p.lastUpdateTime,
                 })),
               },
               null,

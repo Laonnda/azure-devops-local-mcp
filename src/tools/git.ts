@@ -114,6 +114,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
                   sourceBranch: pr.sourceRefName.replace("refs/heads/", ""),
                   targetBranch: pr.targetRefName.replace("refs/heads/", ""),
                   repository: pr.repository.name,
+                  webUrl: pr.webUrl,
                   reviewers: pr.reviewers.map((r) => ({
                     name: r.displayName,
                     id: r.id,

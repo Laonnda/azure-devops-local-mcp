@@ -66,6 +66,38 @@ describe("GitClient", () => {
     expect(repos[0].defaultBranch).toBe("refs/heads/main");
   });
 
+  it("listPullRequests webUrl falls back to url when _links absent", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [
+            {
+              pullRequestId: 7,
+              title: "T",
+              description: "",
+              status: "active",
+              createdBy: { displayName: "Dev" },
+              creationDate: "2026-01-01T00:00:00Z",
+              sourceRefName: "refs/heads/feat",
+              targetRefName: "refs/heads/main",
+              repository: { id: "r1", name: "repo" },
+              reviewers: [],
+              isDraft: false,
+              url: "https://dev.azure.com/api/pr/7",
+            },
+          ],
+          count: 1,
+        }),
+    });
+
+    const client = new GitClient(createConfig());
+    const prs = await client.listPullRequests("TestProject");
+
+    expect(prs[0].webUrl).toBe("https://dev.azure.com/api/pr/7");
+  });
+
   it("listPullRequests with status='all' sends searchCriteria.status=all to the API", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -121,7 +153,8 @@ describe("GitClient", () => {
             },
           ],
           isDraft: false,
-          url: "https://dev.azure.com/...",
+          url: "https://dev.azure.com/api/pr/42",
+          _links: { web: { href: "https://dev.azure.com/TestProject/_git/my-repo/pullrequest/42" } },
         },
       ],
       count: 1,
@@ -145,6 +178,7 @@ describe("GitClient", () => {
     expect(prs[0].reviewers[0].displayName).toBe("Jane");
     expect(prs[0].reviewers[0].id).toBe("bbbb-0002");
     expect(prs[0].reviewers[0].uniqueName).toBe("jane@example.com");
+    expect(prs[0].webUrl).toBe("https://dev.azure.com/TestProject/_git/my-repo/pullrequest/42");
   });
 
   it("listPullRequests falls back to empty strings when id/uniqueName absent", async () => {
@@ -162,7 +196,8 @@ describe("GitClient", () => {
           repository: { id: "r1", name: "repo" },
           reviewers: [{ displayName: "Rev", vote: 0, isRequired: false }],
           isDraft: false,
-          url: "https://dev.azure.com/...",
+          url: "https://dev.azure.com/api/...",
+          _links: { web: { href: "https://dev.azure.com/web/..." } },
         },
       ],
       count: 1,
@@ -182,6 +217,7 @@ describe("GitClient", () => {
     expect(prs[0].createdBy.uniqueName).toBe("");
     expect(prs[0].reviewers[0].id).toBe("");
     expect(prs[0].reviewers[0].uniqueName).toBe("");
+    expect(prs[0].webUrl).toBe("https://dev.azure.com/web/...");
   });
 
   describe("createComment", () => {
