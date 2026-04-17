@@ -9,7 +9,7 @@ import { logger } from "../utils/logger.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
 import { sanitizeObject } from "../utils/sanitize.js";
 
-const API_VERSION = "7.2";
+const DEFAULT_API_VERSION = "7.2-preview";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 3;
 
@@ -60,7 +60,7 @@ export class BaseClient {
       project,
       useProjectScope = true,
       timeoutMs = DEFAULT_TIMEOUT_MS,
-      apiVersion = API_VERSION,
+      apiVersion = this.config.apiVersion ?? DEFAULT_API_VERSION,
     } = options;
 
     let basePath: string;

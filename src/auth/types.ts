@@ -10,4 +10,5 @@ export interface AdoConfig {
   orgUrl: string;
   defaultProject?: string;
   auth: AuthProvider;
+  apiVersion?: string;
 }
