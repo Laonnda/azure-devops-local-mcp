@@ -7,8 +7,23 @@
   "bin": {
     "ado-mcp": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Laonnda/ado-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "azure-devops",
+    "claude",
+    "model-context-protocol",
+    "devops"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "start:sse": "node dist/index.js --transport http",
