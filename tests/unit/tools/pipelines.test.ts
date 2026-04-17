@@ -399,7 +399,7 @@ describe("PipelinesClient.listRuns — response mapping", () => {
     expect(run.sourceVersion).toBe("");
   });
 
-  it("passes statusFilter param in URL (excluding 'all')", async () => {
+  it("passes statusFilter=completed in URL", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -413,7 +413,7 @@ describe("PipelinesClient.listRuns — response mapping", () => {
     expect(calledUrl).toContain("statusFilter=completed");
   });
 
-  it("omits statusFilter param when value is 'all'", async () => {
+  it("passes statusFilter=all in URL (returns all statuses)", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -424,7 +424,7 @@ describe("PipelinesClient.listRuns — response mapping", () => {
     await client.listRuns("TestProject", undefined, { statusFilter: "all" });
 
     const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(calledUrl).not.toContain("statusFilter");
+    expect(calledUrl).toContain("statusFilter=all");
   });
 
   it("includes pipelineId as definitions param in URL when provided", async () => {

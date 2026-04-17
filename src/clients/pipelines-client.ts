@@ -231,7 +231,7 @@ export class PipelinesClient extends BaseClient {
     if (pipelineId !== undefined) {
       params.set("definitions", String(pipelineId));
     }
-    if (opts.statusFilter && opts.statusFilter !== "all") {
+    if (opts.statusFilter) {
       params.set("statusFilter", opts.statusFilter);
     }
     if (opts.continuationToken) {
