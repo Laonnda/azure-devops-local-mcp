@@ -149,7 +149,7 @@ export class GitClient extends BaseClient {
       : "git/pullrequests";
 
     const params = new URLSearchParams();
-    if (options.status && options.status !== "all") {
+    if (options.status) {
       params.set("searchCriteria.status", options.status);
     }
     if (options.creatorId) {

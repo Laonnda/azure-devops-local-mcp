@@ -65,6 +65,34 @@ describe("GitClient", () => {
     expect(repos[0].defaultBranch).toBe("refs/heads/main");
   });
 
+  it("listPullRequests with status='all' sends searchCriteria.status=all to the API", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [], count: 0 }),
+    });
+
+    const client = new GitClient(createConfig());
+    await client.listPullRequests("TestProject", { status: "all" });
+
+    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("searchCriteria.status=all");
+  });
+
+  it("listPullRequests with status='active' sends correct status param", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [], count: 0 }),
+    });
+
+    const client = new GitClient(createConfig());
+    await client.listPullRequests("TestProject", { status: "active" });
+
+    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("searchCriteria.status=active");
+  });
+
   it("listPullRequests returns mapped PRs", async () => {
     const mockResponse = {
       value: [
