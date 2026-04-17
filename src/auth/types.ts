@@ -13,4 +13,5 @@ export interface AdoConfig {
   defaultProject?: string;
   auth: AuthProvider;
   rateLimiter: RateLimiter;
+  apiVersion?: string;
 }

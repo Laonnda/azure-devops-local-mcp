@@ -12,10 +12,20 @@ import { createServer } from "./server.js";
 import { logger } from "./utils/logger.js";
 import { RateLimiter } from "./utils/rate-limiter.js";
 
+const API_VERSION_PATTERN = /^\d+\.\d+(-preview(\.\d+)?)?$/;
+
 function loadConfig(): AdoConfig {
   const orgUrl = process.env.ADO_ORG_URL;
   if (!orgUrl) {
     logger.error("ADO_ORG_URL environment variable is required");
+    process.exit(1);
+  }
+
+  const apiVersion = process.env.ADO_API_VERSION;
+  if (apiVersion && !API_VERSION_PATTERN.test(apiVersion)) {
+    logger.error(
+      `ADO_API_VERSION "${apiVersion}" is invalid. Expected format: 7.2, 7.2-preview, or 7.2-preview.3`,
+    );
     process.exit(1);
   }
 
@@ -35,6 +45,7 @@ function loadConfig(): AdoConfig {
     defaultProject: process.env.ADO_DEFAULT_PROJECT,
     auth,
     rateLimiter,
+    apiVersion,
   };
 }
 

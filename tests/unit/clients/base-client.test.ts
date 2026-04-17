@@ -69,7 +69,7 @@ describe("BaseClient", () => {
     await client.testRequest("projects");
 
     const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(calledUrl).toContain("api-version=7.1");
+    expect(calledUrl).toContain("api-version=7.2-preview");
   });
 
   it("throws AuthenticationError on 401", async () => {
