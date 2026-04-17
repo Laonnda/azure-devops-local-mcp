@@ -89,7 +89,13 @@ interface RawPullRequest {
   sourceRefName: string;
   targetRefName: string;
   repository: { id: string; name: string };
-  reviewers: { displayName: string; id?: string; uniqueName?: string; vote: number; isRequired: boolean }[];
+  reviewers: {
+    displayName: string;
+    id?: string;
+    uniqueName?: string;
+    vote: number;
+    isRequired: boolean;
+  }[];
   isDraft: boolean;
   url: string;
   _links?: { web?: { href: string } };

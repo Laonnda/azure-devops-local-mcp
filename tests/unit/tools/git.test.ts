@@ -154,7 +154,9 @@ describe("GitClient", () => {
           ],
           isDraft: false,
           url: "https://dev.azure.com/api/pr/42",
-          _links: { web: { href: "https://dev.azure.com/TestProject/_git/my-repo/pullrequest/42" } },
+          _links: {
+            web: { href: "https://dev.azure.com/TestProject/_git/my-repo/pullrequest/42" },
+          },
         },
       ],
       count: 1,
@@ -486,11 +488,17 @@ describe("ado_git_create_pr_comment tool — mutual exclusion (MED-4)", () => {
 
     const tool = (
       server as unknown as {
-        _registeredTools: Record<string, { inputSchema: { parse: (v: unknown) => unknown }; handler: (v: unknown) => Promise<unknown> }>;
+        _registeredTools: Record<
+          string,
+          {
+            inputSchema: { parse: (v: unknown) => unknown };
+            handler: (v: unknown) => Promise<unknown>;
+          }
+        >;
       }
     )._registeredTools["ado_git_create_pr_comment"];
 
-    const result = await tool.handler({
+    const result = (await tool.handler({
       project: "TestProject",
       repositoryId: "repo-1",
       pullRequestId: 1,
@@ -498,7 +506,7 @@ describe("ado_git_create_pr_comment tool — mutual exclusion (MED-4)", () => {
       threadId: 5,
       filePath: "/src/foo.ts",
       side: "right",
-    }) as { isError: boolean; content: { text: string }[] };
+    })) as { isError: boolean; content: { text: string }[] };
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/mutually exclusive/);
@@ -507,21 +515,15 @@ describe("ado_git_create_pr_comment tool — mutual exclusion (MED-4)", () => {
 
 describe("guidSchema (MED-3 — creatorId GUID validation)", () => {
   it("accepts a valid lowercase GUID", () => {
-    expect(() =>
-      guidSchema.parse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
-    ).not.toThrow();
+    expect(() => guidSchema.parse("a1b2c3d4-e5f6-7890-abcd-ef1234567890")).not.toThrow();
   });
 
   it("accepts a valid uppercase GUID", () => {
-    expect(() =>
-      guidSchema.parse("A1B2C3D4-E5F6-7890-ABCD-EF1234567890"),
-    ).not.toThrow();
+    expect(() => guidSchema.parse("A1B2C3D4-E5F6-7890-ABCD-EF1234567890")).not.toThrow();
   });
 
   it("accepts an all-zeros GUID", () => {
-    expect(() =>
-      guidSchema.parse("00000000-0000-0000-0000-000000000000"),
-    ).not.toThrow();
+    expect(() => guidSchema.parse("00000000-0000-0000-0000-000000000000")).not.toThrow();
   });
 
   it("rejects a plain string (no hyphens)", () => {

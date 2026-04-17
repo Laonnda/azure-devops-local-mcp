@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
 /**
  * Tests for startup validation in src/index.ts.
@@ -9,10 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  * we test it via child_process so we don't pollute the test runner process.
  */
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { resolve } from "node:path";
-
-const execFileAsync = promisify(execFile);
 
 const ENTRY = resolve("dist/index.js");
 
@@ -38,8 +35,7 @@ async function runEntry(
         // _err is set when the process exits non-zero — that's expected
         const exitCode =
           (_err as NodeJS.ErrnoException & { code?: number }) !== null &&
-          typeof (_err as NodeJS.ErrnoException & { code?: number }).code ===
-            "number"
+          typeof (_err as NodeJS.ErrnoException & { code?: number }).code === "number"
             ? ((_err as NodeJS.ErrnoException & { code?: number }).code ?? null)
             : 0;
         resolve({ exitCode, stderr, stdout });

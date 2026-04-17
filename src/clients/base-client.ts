@@ -53,10 +53,7 @@ export class BaseClient {
   /**
    * Make an authenticated request to the Azure DevOps API.
    */
-  async request<T>(
-    path: string,
-    options: RequestOptions = {},
-  ): Promise<T> {
+  async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const { body } = await this._request<T>(path, options);
     return body;
   }

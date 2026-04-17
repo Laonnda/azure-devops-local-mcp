@@ -282,7 +282,11 @@ describe("WikiClient.getPage", () => {
 
   it("maps response fields correctly", async () => {
     globalThis.fetch = mockFetchOk(
-      makeRawPage({ path: "/Docs/Setup", content: "## Setup Guide", lastUpdatedDate: "2026-03-15T08:00:00Z" }),
+      makeRawPage({
+        path: "/Docs/Setup",
+        content: "## Setup Guide",
+        lastUpdatedDate: "2026-03-15T08:00:00Z",
+      }),
       '"abc123def456"',
     );
 

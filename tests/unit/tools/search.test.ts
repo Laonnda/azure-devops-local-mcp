@@ -42,8 +42,7 @@ describe("SearchClient.searchCode — matches mapping", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () =>
-        Promise.resolve({ count: 1, results: [makeRawSearchResult()] }),
+      json: () => Promise.resolve({ count: 1, results: [makeRawSearchResult()] }),
     });
 
     const client = new SearchClient(createConfig());
@@ -122,8 +121,7 @@ describe("SearchClient.searchCode — matches mapping", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () =>
-        Promise.resolve({ count: 1, results: [makeRawSearchResult()] }),
+      json: () => Promise.resolve({ count: 1, results: [makeRawSearchResult()] }),
     });
 
     const client = new SearchClient(createConfig());

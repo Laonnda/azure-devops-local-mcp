@@ -84,7 +84,9 @@ describe("WorkItemsClient — webUrl mapping", () => {
       });
     });
 
-    const result = await client.query("SELECT [System.Id] FROM WorkItems", { project: "TestProject" });
+    const result = await client.query("SELECT [System.Id] FROM WorkItems", {
+      project: "TestProject",
+    });
     expect(result.items[0].webUrl).toBe(
       "https://dev.azure.com/testorg/TestProject/_workitems/edit/1",
     );
@@ -132,7 +134,9 @@ describe("WorkItemsClient — webUrl mapping", () => {
       });
     });
 
-    const result = await client.query("SELECT [System.Id] FROM WorkItems", { project: "TestProject" });
+    const result = await client.query("SELECT [System.Id] FROM WorkItems", {
+      project: "TestProject",
+    });
     expect(result.items[0].webUrl).toBe("");
   });
 });

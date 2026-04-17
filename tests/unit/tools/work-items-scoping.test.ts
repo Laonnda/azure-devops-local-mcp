@@ -68,7 +68,9 @@ function calledUrl(callIndex = 0): string {
 }
 
 function calledBody(callIndex = 0): Record<string, unknown> {
-  const opts = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[callIndex][1] as RequestInit;
+  const opts = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[
+    callIndex
+  ][1] as RequestInit;
   return JSON.parse(opts.body as string) as Record<string, unknown>;
 }
 
@@ -148,8 +150,7 @@ describe("case 5: query with WIQL that already has [System.TeamProject] — no d
 
 describe("case 6: injectProjectFilter — WIQL with ORDER BY but no WHERE", () => {
   it("inserts WHERE condition before ORDER BY", () => {
-    const wiql =
-      "SELECT [System.Id] FROM WorkItems ORDER BY [System.ChangedDate] DESC";
+    const wiql = "SELECT [System.Id] FROM WorkItems ORDER BY [System.ChangedDate] DESC";
     const result = injectProjectFilter(wiql, "EMS");
 
     const whereIdx = result.search(/\bWHERE\b/i);
@@ -224,9 +225,7 @@ describe("case 11: ado_workitems_list_recent tool, top=2 with 10 total", () => {
 
     // Invoke the tool handler directly via the registered callback
     // by calling the client method, mirroring what the tool does
-    const { WorkItemsClient: Client } = await import(
-      "../../../src/clients/work-items-client.js"
-    );
+    const { WorkItemsClient: Client } = await import("../../../src/clients/work-items-client.js");
     const client = new Client(config);
     const result = await client.query(
       "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems ORDER BY [System.ChangedDate] DESC",

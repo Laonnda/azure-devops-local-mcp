@@ -287,7 +287,9 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
         side,
       }) => {
         if (threadId !== undefined && filePath !== undefined) {
-          throw new ValidationError("threadId and filePath are mutually exclusive: use threadId to reply to an existing thread, or filePath to create an inline comment on a new thread.");
+          throw new ValidationError(
+            "threadId and filePath are mutually exclusive: use threadId to reply to an existing thread, or filePath to create an inline comment on a new thread.",
+          );
         }
 
         const result = await client.createComment(project, repositoryId, pullRequestId, {

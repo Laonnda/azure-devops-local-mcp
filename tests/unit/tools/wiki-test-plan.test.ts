@@ -82,7 +82,9 @@ function calledUrl(callIndex = 0): string {
 }
 
 function calledBody(callIndex = 0): Record<string, unknown> {
-  const options = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[callIndex][1] as RequestInit;
+  const options = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[
+    callIndex
+  ][1] as RequestInit;
   return JSON.parse(options.body as string) as Record<string, unknown>;
 }
 
@@ -143,7 +145,10 @@ describe("ado_wiki_list — case 3: no wikis provisioned", () => {
 describe("ado_wiki_list — case 4: org-scope when project omitted", () => {
   it("calls org-level endpoint (no project segment in URL)", async () => {
     mockFetchOnce(
-      _wikisResponse(_wiki("w-1", "A", "projectWiki", "p-1"), _wiki("w-2", "B", "projectWiki", "p-2")),
+      _wikisResponse(
+        _wiki("w-1", "A", "projectWiki", "p-1"),
+        _wiki("w-2", "B", "projectWiki", "p-2"),
+      ),
     );
     const client = new WikiClient(createConfig());
     const result = await client.listWikis(); // no project
@@ -211,7 +216,10 @@ describe("ado_wiki_list_pages — case 9: explicit wikiId used directly", () => 
 describe("ado_wiki_list_pages — case 10: wikiId omitted, auto-resolves projectWiki", () => {
   it("calls wikis-list first then pages with the projectWiki id", async () => {
     mockFetchSequence(
-      _wikisResponse(_wiki("code-w", "DevDocs", "codeWiki"), _wiki("proj-w", "MainWiki", "projectWiki")),
+      _wikisResponse(
+        _wiki("code-w", "DevDocs", "codeWiki"),
+        _wiki("proj-w", "MainWiki", "projectWiki"),
+      ),
       { value: [{ path: "/Home" }], count: 1 },
     );
     const client = new WikiClient(createConfig());
@@ -228,7 +236,10 @@ describe("ado_wiki_list_pages — case 10: wikiId omitted, auto-resolves project
 describe("ado_wiki_list_pages — case 11: only codeWikis exist", () => {
   it("throws ValidationError listing available wiki names", async () => {
     mockFetchOnce(
-      _wikisResponse(_wiki("code-1", "DevDocs", "codeWiki"), _wiki("code-2", "ArchDocs", "codeWiki")),
+      _wikisResponse(
+        _wiki("code-1", "DevDocs", "codeWiki"),
+        _wiki("code-2", "ArchDocs", "codeWiki"),
+      ),
     );
     const client = new WikiClient(createConfig());
     const err = await client.resolveProjectWikiId("DEMO PROJECT").catch((e) => e);
@@ -268,7 +279,9 @@ describe("ado_wiki_list_pages — case 13: multiple projectWikis", () => {
     expect(calledUrl(1)).toContain("proj-a");
     expect(calledUrl(1)).not.toContain("proj-b");
     const warnMessages = warnSpy.mock.calls.map(([msg]) => msg.toLowerCase());
-    expect(warnMessages.some((m) => m.includes("multiple") || m.includes("projectwiki"))).toBe(true);
+    expect(warnMessages.some((m) => m.includes("multiple") || m.includes("projectwiki"))).toBe(
+      true,
+    );
   });
 });
 
@@ -285,10 +298,7 @@ describe("ado_wiki_list_pages — case 14: wikiId and project both omitted", () 
 
 describe("ado_wiki_list_pages — case 15: pagination forwarded to pagesbatch body only", () => {
   it("top/continuationToken go in pagesbatch body; wikis-list URL has no pagination params", async () => {
-    mockFetchSequence(
-      _wikisResponse(_wiki("proj-w", "MainWiki", "projectWiki")),
-      { value: [] },
-    );
+    mockFetchSequence(_wikisResponse(_wiki("proj-w", "MainWiki", "projectWiki")), { value: [] });
     const client = new WikiClient(createConfig());
     const resolvedId = await client.resolveProjectWikiId("DEMO PROJECT");
     await client.listPages("DEMO PROJECT", resolvedId, { top: 10, continuationToken: "tok-abc" });
