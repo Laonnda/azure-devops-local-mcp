@@ -140,7 +140,10 @@ export function registerWikiTools(server: McpServer, config: AdoConfig): void {
       description:
         "Create or update an Azure DevOps wiki page at the specified path. " +
         "If the page does not exist it will be created; if it exists it will be updated. " +
-        "Returns the updated page content and metadata. Requires vso.wiki_write PAT scope.",
+        "To prevent overwriting concurrent edits, pass the `etag` returned by ado_wiki_get_page " +
+        "as the `etag` input — the update will fail with a conflict error if the page changed since. " +
+        "Omit `etag` to do an unconditional overwrite. " +
+        "Returns the updated page content and its new etag. Requires vso.wiki_write PAT scope.",
       inputSchema: {
         wikiId: wikiIdSchema.describe("Wiki ID (GUID) or wiki name"),
         path: wikiPathSchema.describe("Wiki page path (e.g. /MyPage or /Parent/Child)"),
@@ -151,15 +154,23 @@ export function registerWikiTools(server: McpServer, config: AdoConfig): void {
           .max(256)
           .optional()
           .describe("Optional commit message for the page update"),
+        etag: z
+          .string()
+          .max(512)
+          .optional()
+          .describe(
+            "ETag from a previous ado_wiki_get_page call. Enables optimistic concurrency: " +
+              "the update is rejected if another edit happened since the page was read.",
+          ),
       },
       annotations: {
         readOnlyHint: false,
         openWorldHint: true,
       },
     },
-    withErrorHandling(async ({ wikiId, path, content, project, message }) => {
+    withErrorHandling(async ({ wikiId, path, content, project, message, etag }) => {
       const resolvedProject = project ?? config.defaultProject ?? "";
-      const result = await client.updatePage(resolvedProject, wikiId, path, content, message);
+      const result = await client.updatePage(resolvedProject, wikiId, path, content, message, etag);
 
       return {
         content: [

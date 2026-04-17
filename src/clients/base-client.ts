@@ -13,6 +13,17 @@ const API_VERSION = "7.1";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 3;
 
+interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  contentType?: string;
+  project?: string;
+  useProjectScope?: boolean;
+  timeoutMs?: number;
+  /** Additional HTTP headers merged into the request (e.g. If-Match for optimistic concurrency). */
+  extraHeaders?: Record<string, string>;
+}
+
 export class BaseClient {
   private readonly config: AdoConfig;
   private readonly rateLimiter: RateLimiter;
@@ -43,15 +54,27 @@ export class BaseClient {
    */
   async request<T>(
     path: string,
-    options: {
-      method?: string;
-      body?: unknown;
-      contentType?: string;
-      project?: string;
-      useProjectScope?: boolean;
-      timeoutMs?: number;
-    } = {},
+    options: RequestOptions = {},
   ): Promise<T> {
+    const { body } = await this._request<T>(path, options);
+    return body;
+  }
+
+  /**
+   * Like request(), but also returns the ETag response header.
+   * Used by clients that need the ETag for optimistic concurrency (e.g. wiki PUT).
+   */
+  protected async requestFull<T>(
+    path: string,
+    options: RequestOptions = {},
+  ): Promise<{ body: T; etag: string | null }> {
+    return this._request<T>(path, options);
+  }
+
+  private async _request<T>(
+    path: string,
+    options: RequestOptions = {},
+  ): Promise<{ body: T; etag: string | null }> {
     const {
       method = "GET",
       body,
@@ -59,6 +82,7 @@ export class BaseClient {
       project,
       useProjectScope = true,
       timeoutMs = DEFAULT_TIMEOUT_MS,
+      extraHeaders,
     } = options;
 
     let basePath: string;
@@ -76,6 +100,7 @@ export class BaseClient {
     const headers: Record<string, string> = {
       Authorization: authHeader,
       Accept: "application/json",
+      ...extraHeaders,
     };
 
     if (body) {
@@ -128,11 +153,12 @@ export class BaseClient {
 
         // Handle 204 No Content
         if (response.status === 204) {
-          return undefined as T;
+          return { body: undefined as T, etag: null };
         }
 
+        const etag = response.headers?.get("ETag") ?? null;
         const data = await response.json();
-        return sanitizeObject(data) as T;
+        return { body: sanitizeObject(data) as T, etag };
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           lastError = new Error(`Request timed out after ${timeoutMs}ms`);

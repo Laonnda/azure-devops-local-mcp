@@ -13,7 +13,8 @@ export interface WikiPage {
   url: string;
   content: string;
   lastUpdatedDate: string;
-  version: number;
+  /** ETag (git commit hash) returned by the API. Pass as `etag` to ado_wiki_update_page for optimistic concurrency. */
+  etag: string;
 }
 
 export interface WikiPagesResponse {
@@ -29,7 +30,6 @@ interface RawWikiPage {
   lastUpdatedDate?: string;
   gitItemPath?: string;
   versions?: { version: string }[];
-  version?: number;
 }
 
 interface RawWikiPagesResponse {
@@ -113,11 +113,11 @@ export class WikiClient extends BaseClient {
    */
   async getPage(project: string, wikiId: string, path: string): Promise<WikiPage> {
     const params = new URLSearchParams({ path, includeContent: "true" });
-    const raw = await this.request<RawWikiPage>(
+    const { body, etag } = await this.requestFull<RawWikiPage>(
       `wiki/wikis/${encodeURIComponent(wikiId)}/pages?${params.toString()}`,
       { project },
     );
-    return mapWikiPage(raw);
+    return { ...mapWikiPage(body), etag: etag ?? "" };
   }
 
   /**
@@ -162,6 +162,7 @@ export class WikiClient extends BaseClient {
     path: string,
     content: string,
     message?: string,
+    etag?: string,
   ): Promise<WikiPage> {
     const params = new URLSearchParams({ path });
     const body: Record<string, unknown> = { content };
@@ -169,15 +170,21 @@ export class WikiClient extends BaseClient {
       body.gitVersionDescriptor = { commitMessage: message };
     }
 
-    const raw = await this.request<RawWikiPage>(
+    const extraHeaders: Record<string, string> = {};
+    if (etag) {
+      extraHeaders["If-Match"] = etag;
+    }
+
+    const { body: raw, etag: newEtag } = await this.requestFull<RawWikiPage>(
       `wiki/wikis/${encodeURIComponent(wikiId)}/pages?${params.toString()}`,
       {
         method: "PUT",
         body,
         project,
+        extraHeaders,
       },
     );
-    return mapWikiPage(raw);
+    return { ...mapWikiPage(raw), etag: newEtag ?? "" };
   }
 }
 
@@ -187,7 +194,7 @@ function mapWikiPage(raw: RawWikiPage): WikiPage {
     url: raw.url,
     content: raw.content ?? "",
     lastUpdatedDate: raw.lastUpdatedDate ?? "",
-    version: raw.version ?? 0,
+    etag: "",
   };
 }
 

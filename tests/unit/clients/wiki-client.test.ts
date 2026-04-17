@@ -19,9 +19,18 @@ function makeRawPage(overrides: Record<string, unknown> = {}) {
     url: "https://dev.azure.com/testorg/TestProject/_wiki/wikis/my-wiki/1/MyPage",
     content: "# Hello",
     lastUpdatedDate: "2026-04-01T10:00:00Z",
-    version: 3,
     ...overrides,
   };
+}
+
+function mockFetchOk(body: unknown, etag?: string) {
+  const headers = new Headers(etag ? { ETag: etag } : {});
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    headers,
+    json: () => Promise.resolve(body),
+  });
 }
 
 function makeRawWiki(overrides: Record<string, unknown> = {}) {
@@ -272,19 +281,10 @@ describe("WikiClient.getPage", () => {
   });
 
   it("maps response fields correctly", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () =>
-        Promise.resolve(
-          makeRawPage({
-            path: "/Docs/Setup",
-            content: "## Setup Guide",
-            lastUpdatedDate: "2026-03-15T08:00:00Z",
-            version: 7,
-          }),
-        ),
-    });
+    globalThis.fetch = mockFetchOk(
+      makeRawPage({ path: "/Docs/Setup", content: "## Setup Guide", lastUpdatedDate: "2026-03-15T08:00:00Z" }),
+      '"abc123def456"',
+    );
 
     const client = new WikiClient(createConfig());
     const page = await client.getPage("TestProject", "wiki-id", "/Docs/Setup");
@@ -292,7 +292,25 @@ describe("WikiClient.getPage", () => {
     expect(page.path).toBe("/Docs/Setup");
     expect(page.content).toBe("## Setup Guide");
     expect(page.lastUpdatedDate).toBe("2026-03-15T08:00:00Z");
-    expect(page.version).toBe(7);
+    expect(page.etag).toBe('"abc123def456"');
+  });
+
+  it("exposes ETag from response header", async () => {
+    globalThis.fetch = mockFetchOk(makeRawPage(), '"commit-hash-9999"');
+
+    const client = new WikiClient(createConfig());
+    const page = await client.getPage("TestProject", "wiki-id", "/Page");
+
+    expect(page.etag).toBe('"commit-hash-9999"');
+  });
+
+  it("returns empty string for etag when ETag header is absent", async () => {
+    globalThis.fetch = mockFetchOk(makeRawPage());
+
+    const client = new WikiClient(createConfig());
+    const page = await client.getPage("TestProject", "wiki-id", "/Page");
+
+    expect(page.etag).toBe("");
   });
 
   it("defaults content to empty string when missing", async () => {
@@ -321,17 +339,13 @@ describe("WikiClient.getPage", () => {
     expect(page.lastUpdatedDate).toBe("");
   });
 
-  it("defaults version to 0 when missing", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(makeRawPage({ version: undefined })),
-    });
+  it("defaults etag to empty string when ETag header absent", async () => {
+    globalThis.fetch = mockFetchOk(makeRawPage());
 
     const client = new WikiClient(createConfig());
     const page = await client.getPage("TestProject", "wiki-id", "/Page");
 
-    expect(page.version).toBe(0);
+    expect(page.etag).toBe("");
   });
 
   it("throws AuthenticationError on 401", async () => {
@@ -620,11 +634,12 @@ describe("WikiClient.updatePage", () => {
     expect(calledUrl).toContain("path=%2FMyPage");
   });
 
-  it("returns mapped page on success", async () => {
-    const rawPage = makeRawPage({ path: "/MyPage", content: "# Updated", version: 5 });
+  it("returns mapped page on success with new etag", async () => {
+    const rawPage = makeRawPage({ path: "/MyPage", content: "# Updated" });
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      headers: new Headers({ ETag: '"updated-commit-hash"' }),
       json: () => Promise.resolve(rawPage),
     });
 
@@ -633,7 +648,39 @@ describe("WikiClient.updatePage", () => {
 
     expect(page.path).toBe("/MyPage");
     expect(page.content).toBe("# Updated");
-    expect(page.version).toBe(5);
+    expect(page.etag).toBe('"updated-commit-hash"');
+  });
+
+  it("sends If-Match header when etag is provided", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: () => Promise.resolve(makeRawPage()),
+    });
+
+    const client = new WikiClient(createConfig());
+    await client.updatePage("TestProject", "my-wiki", "/Page", "# Content", undefined, '"abc123"');
+
+    const calledHeaders = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1]
+      .headers as Record<string, string>;
+    expect(calledHeaders["If-Match"]).toBe('"abc123"');
+  });
+
+  it("does not send If-Match header when etag is absent", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: () => Promise.resolve(makeRawPage()),
+    });
+
+    const client = new WikiClient(createConfig());
+    await client.updatePage("TestProject", "my-wiki", "/Page", "# Content");
+
+    const calledHeaders = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1]
+      .headers as Record<string, string>;
+    expect(calledHeaders["If-Match"]).toBeUndefined();
   });
 
   it("throws AuthenticationError on 401", async () => {
@@ -690,6 +737,7 @@ describe("WikiClient.updatePage", () => {
       return Promise.resolve({
         ok: true,
         status: 200,
+        headers: new Headers(),
         json: () => Promise.resolve(makeRawPage()),
       });
     });

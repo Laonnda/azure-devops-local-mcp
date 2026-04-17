@@ -23,7 +23,6 @@ function makeWikiPage(overrides: Record<string, unknown> = {}) {
     url: "https://dev.azure.com/testorg/TestProject/_wiki/wikis/my-wiki/1/MyPage",
     content: "# Hello World",
     lastUpdatedDate: "2026-04-01T10:00:00Z",
-    version: 3,
     ...overrides,
   };
 }
@@ -144,7 +143,7 @@ describe("WikiClient.getPage — response mapping", () => {
     expect(page.content).toBe("# Hello World");
     expect(page.url).toContain("my-wiki");
     expect(page.lastUpdatedDate).toBe("2026-04-01T10:00:00Z");
-    expect(page.version).toBe(3);
+    expect(page.etag).toBe("");
   });
 
   it("propagates AuthenticationError on 401", async () => {
@@ -260,10 +259,11 @@ describe("WikiClient.updatePage — request formation and response", () => {
   });
 
   it("returns mapped page after successful update", async () => {
-    const updatedPage = makeWikiPage({ content: "# Updated", version: 4 });
+    const updatedPage = makeWikiPage({ content: "# Updated" });
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      headers: new Headers({ ETag: '"new-commit-hash"' }),
       json: () => Promise.resolve(updatedPage),
     });
 
@@ -271,7 +271,7 @@ describe("WikiClient.updatePage — request formation and response", () => {
     const page = await client.updatePage("TestProject", "my-wiki", "/MyPage", "# Updated");
 
     expect(page.content).toBe("# Updated");
-    expect(page.version).toBe(4);
+    expect(page.etag).toBe('"new-commit-hash"');
   });
 
   it("includes commit message in gitVersionDescriptor when provided", async () => {
