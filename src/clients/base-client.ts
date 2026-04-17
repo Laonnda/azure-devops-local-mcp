@@ -50,6 +50,7 @@ export class BaseClient {
       project?: string;
       useProjectScope?: boolean;
       timeoutMs?: number;
+      apiVersion?: string;
     } = {},
   ): Promise<T> {
     const {
@@ -59,6 +60,7 @@ export class BaseClient {
       project,
       useProjectScope = true,
       timeoutMs = DEFAULT_TIMEOUT_MS,
+      apiVersion = API_VERSION,
     } = options;
 
     let basePath: string;
@@ -69,7 +71,7 @@ export class BaseClient {
     }
 
     const separator = path.includes("?") ? "&" : "?";
-    const url = `${basePath}/${path}${separator}api-version=${API_VERSION}`;
+    const url = `${basePath}/${path}${separator}api-version=${apiVersion}`;
 
     const authHeader = await this.config.auth.getAuthHeader();
 

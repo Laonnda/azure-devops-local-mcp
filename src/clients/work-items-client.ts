@@ -55,6 +55,36 @@ interface WorkItemsBatchResponse {
 /** Patterns that should not appear in WIQL queries */
 const WIQL_BLOCKED_PATTERNS = [/;\s*(DROP|DELETE|INSERT|UPDATE|ALTER|CREATE|EXEC)/i];
 
+/**
+ * Friendly link-type names mapped to Azure DevOps relation reference names.
+ * `parent`/`child` are the hierarchy links the board uses for Feature->Task etc.
+ */
+export const LINK_TYPE_TO_REL = {
+  parent: "System.LinkTypes.Hierarchy-Reverse",
+  child: "System.LinkTypes.Hierarchy-Forward",
+  related: "System.LinkTypes.Related",
+  predecessor: "System.LinkTypes.Dependency-Reverse",
+  successor: "System.LinkTypes.Dependency-Forward",
+  duplicate: "System.LinkTypes.Duplicate-Forward",
+  "duplicate-of": "System.LinkTypes.Duplicate-Reverse",
+} as const;
+
+export type LinkType = keyof typeof LINK_TYPE_TO_REL;
+
+/** Extract the numeric work item id from a relation's URL. */
+function extractWorkItemIdFromUrl(url: string): number | null {
+  const match = /\/workItems\/(\d+)(?:[?#/]|$)/i.exec(url);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * Azure DevOps rejects `api-version=7.2` on work-item relation patches
+ * ("the resource is under preview, -preview flag must be supplied").
+ * Pinning link/unlink to the stable 7.1 version keeps them working against
+ * standard ADO organisations.
+ */
+const RELATIONS_API_VERSION = "7.1";
+
 function validateWiql(query: string): void {
   for (const pattern of WIQL_BLOCKED_PATTERNS) {
     if (pattern.test(query)) {
@@ -199,6 +229,96 @@ export class WorkItemsClient extends BaseClient {
       contentType: "application/json-patch+json",
       project,
       useProjectScope: !!project,
+    });
+
+    return mapWorkItemDetail(raw);
+  }
+
+  /**
+   * Add a relation (link) from one work item to another.
+   *
+   * For `linkType="parent"`, the call patches `fromId` so that `toId` becomes
+   * its parent on the board (equivalent to dragging `fromId` under `toId`).
+   */
+  async addRelation(
+    fromId: number,
+    toId: number,
+    linkType: LinkType,
+    options: { project?: string; comment?: string } = {},
+  ): Promise<WorkItemDetail> {
+    if (fromId === toId) {
+      throw new ValidationError("Cannot link a work item to itself.");
+    }
+
+    const project = options.project || this.defaultProject;
+    const rel = LINK_TYPE_TO_REL[linkType];
+    const targetUrl = `${this.orgUrl}/_apis/wit/workItems/${toId}`;
+
+    const value: Record<string, unknown> = { rel, url: targetUrl };
+    if (options.comment) {
+      value.attributes = { comment: options.comment };
+    }
+
+    const patchDoc = [{ op: "add" as const, path: "/relations/-", value }];
+
+    const raw = await this.request<WorkItemResponse>(`wit/workitems/${fromId}`, {
+      method: "PATCH",
+      body: patchDoc,
+      contentType: "application/json-patch+json",
+      project,
+      useProjectScope: !!project,
+      apiVersion: RELATIONS_API_VERSION,
+    });
+
+    return mapWorkItemDetail(raw);
+  }
+
+  /**
+   * Remove a relation from a work item. Looks up the relation by target id
+   * and rel type, then deletes it by index (the only form ADO accepts).
+   * Errors if the relation is not present.
+   */
+  async removeRelation(
+    fromId: number,
+    toId: number,
+    linkType: LinkType,
+    options: { project?: string } = {},
+  ): Promise<WorkItemDetail> {
+    const project = options.project || this.defaultProject;
+    const rel = LINK_TYPE_TO_REL[linkType];
+
+    const current = await this.request<WorkItemResponse>(
+      `wit/workitems/${fromId}?$expand=relations`,
+      {
+        project,
+        useProjectScope: !!project,
+        apiVersion: RELATIONS_API_VERSION,
+      },
+    );
+
+    const relations = current.relations ?? [];
+    const index = relations.findIndex(
+      (r) => r.rel === rel && extractWorkItemIdFromUrl(r.url) === toId,
+    );
+
+    if (index === -1) {
+      throw new ValidationError(
+        `No ${linkType} link from #${fromId} to #${toId} found (rel=${rel}).`,
+      );
+    }
+
+    const patchDoc = [
+      { op: "test" as const, path: "/rev", value: current.rev },
+      { op: "remove" as const, path: `/relations/${index}` },
+    ];
+
+    const raw = await this.request<WorkItemResponse>(`wit/workitems/${fromId}`, {
+      method: "PATCH",
+      body: patchDoc,
+      contentType: "application/json-patch+json",
+      project,
+      useProjectScope: !!project,
+      apiVersion: RELATIONS_API_VERSION,
     });
 
     return mapWorkItemDetail(raw);

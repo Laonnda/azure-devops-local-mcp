@@ -103,6 +103,7 @@ Once connected, Claude can use the MCP tools:
 ```
 "List all active bugs in the Backend project"
 "Create a work item: Task titled 'Add caching layer' assigned to @alice"
+"Link these tasks as children of their parent feature"
 "Show me the latest pipeline run for the main branch"
 "Get the diff for PR #142"
 "Search for references to 'AuthMiddleware' across all repos"
