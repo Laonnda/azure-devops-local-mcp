@@ -401,7 +401,7 @@ describe("WikiClient.listPages", () => {
     return { value: pages, count: pages.length };
   }
 
-  it("constructs URL with encoded wikiId", async () => {
+  it("constructs URL pointing to pagesbatch endpoint", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -412,10 +412,10 @@ describe("WikiClient.listPages", () => {
     await client.listPages("TestProject", "my-wiki");
 
     const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(calledUrl).toContain("wiki/wikis/my-wiki/pages");
+    expect(calledUrl).toContain("wiki/wikis/my-wiki/pagesbatch");
   });
 
-  it("appends $top and $skip when provided", async () => {
+  it("sends top in request body when provided", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -423,14 +423,31 @@ describe("WikiClient.listPages", () => {
     });
 
     const client = new WikiClient(createConfig());
-    await client.listPages("TestProject", "my-wiki", { top: 10, skip: 20 });
+    await client.listPages("TestProject", "my-wiki", { top: 10 });
 
-    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(calledUrl).toContain("%24top=10");
-    expect(calledUrl).toContain("%24skip=20");
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
+    const body = JSON.parse(calledOptions.body as string) as Record<string, unknown>;
+    expect(body.top).toBe(10);
   });
 
-  it("omits pagination params when not provided", async () => {
+  it("sends continuationToken in request body when provided", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(makeListResponse()),
+    });
+
+    const client = new WikiClient(createConfig());
+    await client.listPages("TestProject", "my-wiki", { continuationToken: "tok123" });
+
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
+    const body = JSON.parse(calledOptions.body as string) as Record<string, unknown>;
+    expect(body.continuationToken).toBe("tok123");
+  });
+
+  it("omits top and continuationToken from body when not provided", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -440,9 +457,11 @@ describe("WikiClient.listPages", () => {
     const client = new WikiClient(createConfig());
     await client.listPages("TestProject", "my-wiki");
 
-    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(calledUrl).not.toContain("top");
-    expect(calledUrl).not.toContain("skip");
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
+    const body = JSON.parse(calledOptions.body as string) as Record<string, unknown>;
+    expect(body.top).toBeUndefined();
+    expect(body.continuationToken).toBeUndefined();
   });
 
   it("returns mapped pages and count", async () => {

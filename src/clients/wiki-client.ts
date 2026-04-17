@@ -19,6 +19,7 @@ export interface WikiPage {
 export interface WikiPagesResponse {
   pages: WikiPage[];
   count: number;
+  continuationToken?: string;
 }
 
 interface RawWikiPage {
@@ -33,7 +34,7 @@ interface RawWikiPage {
 
 interface RawWikiPagesResponse {
   value: RawWikiPage[];
-  count: number;
+  continuationToken?: string;
 }
 
 export interface Wiki {
@@ -120,7 +121,7 @@ export class WikiClient extends BaseClient {
   }
 
   /**
-   * List pages in a wiki.
+   * List pages in a wiki using the pagesbatch endpoint.
    * @param project - Azure DevOps project name
    * @param wikiId - Wiki ID (GUID) or wiki name
    * @param options - Pagination options
@@ -128,26 +129,22 @@ export class WikiClient extends BaseClient {
   async listPages(
     project: string,
     wikiId: string,
-    options: { top?: number; skip?: number } = {},
+    options: { top?: number; continuationToken?: string } = {},
   ): Promise<WikiPagesResponse> {
-    const params = new URLSearchParams();
-    if (options.top !== undefined) {
-      params.set("$top", String(options.top));
-    }
-    if (options.skip !== undefined) {
-      params.set("$skip", String(options.skip));
-    }
+    const body: Record<string, unknown> = {};
+    if (options.top !== undefined) body.top = options.top;
+    if (options.continuationToken !== undefined) body.continuationToken = options.continuationToken;
 
-    const query = params.toString();
-    const path = query
-      ? `wiki/wikis/${encodeURIComponent(wikiId)}/pages?${query}`
-      : `wiki/wikis/${encodeURIComponent(wikiId)}/pages`;
+    const response = await this.request<RawWikiPagesResponse>(
+      `wiki/wikis/${encodeURIComponent(wikiId)}/pagesbatch`,
+      { method: "POST", body, project },
+    );
 
-    const response = await this.request<RawWikiPagesResponse>(path, { project });
-
+    const pages = response.value ?? [];
     return {
-      pages: response.value.map(mapWikiPage),
-      count: response.count,
+      pages: pages.map(mapWikiPage),
+      count: pages.length,
+      continuationToken: response.continuationToken,
     };
   }
 

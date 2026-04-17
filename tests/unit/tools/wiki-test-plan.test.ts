@@ -81,6 +81,11 @@ function calledUrl(callIndex = 0): string {
   return (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[callIndex][0] as string;
 }
 
+function calledBody(callIndex = 0): Record<string, unknown> {
+  const options = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[callIndex][1] as RequestInit;
+  return JSON.parse(options.body as string) as Record<string, unknown>;
+}
+
 // ---------- Setup / teardown --------------------------------------------------
 
 let originalFetch: typeof globalThis.fetch;
@@ -278,21 +283,24 @@ describe("ado_wiki_list_pages — case 14: wikiId and project both omitted", () 
   });
 });
 
-describe("ado_wiki_list_pages — case 15: pagination forwarded to pages only", () => {
-  it("top/skip appear in pages URL but not in wikis-list URL", async () => {
+describe("ado_wiki_list_pages — case 15: pagination forwarded to pagesbatch body only", () => {
+  it("top/continuationToken go in pagesbatch body; wikis-list URL has no pagination params", async () => {
     mockFetchSequence(
       _wikisResponse(_wiki("proj-w", "MainWiki", "projectWiki")),
-      { value: [], count: 0 },
+      { value: [] },
     );
     const client = new WikiClient(createConfig());
     const resolvedId = await client.resolveProjectWikiId("DEMO PROJECT");
-    await client.listPages("DEMO PROJECT", resolvedId, { top: 10, skip: 5 });
+    await client.listPages("DEMO PROJECT", resolvedId, { top: 10, continuationToken: "tok-abc" });
 
     const wikisUrl = calledUrl(0);
-    expect(wikisUrl).not.toMatch(/[Tt]op|[Ss]kip/);
+    expect(wikisUrl).not.toMatch(/[Tt]op|[Ss]kip|continuation/i);
 
     const pagesUrl = calledUrl(1);
-    expect(pagesUrl).toMatch(/(?:\$|%24)top=10/);
-    expect(pagesUrl).toMatch(/(?:\$|%24)skip=5/);
+    expect(pagesUrl).toContain("pagesbatch");
+
+    const body = calledBody(1);
+    expect(body.top).toBe(10);
+    expect(body.continuationToken).toBe("tok-abc");
   });
 });
