@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { WikiClient } from "../../../src/clients/wiki-client.js";
 import type { AdoConfig } from "../../../src/auth/types.js";
-import { AuthenticationError, NotFoundError } from "../../../src/utils/errors.js";
+import { AuthenticationError, NotFoundError, ValidationError } from "../../../src/utils/errors.js";
 
 function createConfig(): AdoConfig {
   return {
@@ -23,6 +23,212 @@ function makeRawPage(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+function makeRawWiki(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "wiki-guid-1234",
+    name: "MyProject.wiki",
+    type: "projectWiki",
+    projectId: "proj-guid-5678",
+    remoteUrl: "https://dev.azure.com/testorg/MyProject/_git/MyProject.wiki",
+    versions: [{ version: "wikiMain" }],
+    ...overrides,
+  };
+}
+
+describe("WikiClient.listWikis", () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("uses project-scoped URL when project is provided", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [makeRawWiki()], count: 1 }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await client.listWikis("MyProject");
+
+    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("testorg/MyProject/_apis/wiki/wikis");
+  });
+
+  it("uses org-scoped URL when project is omitted", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [makeRawWiki()], count: 1 }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await client.listWikis();
+
+    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    // org-scope: no project segment between org and _apis
+    expect(calledUrl).toMatch(/testorg\/_apis\/wiki\/wikis/);
+  });
+
+  it("maps wiki fields correctly", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [makeRawWiki({ type: "codeWiki", remoteUrl: "https://example.com/repo" })],
+          count: 1,
+        }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const result = await client.listWikis("MyProject");
+
+    expect(result.count).toBe(1);
+    expect(result.wikis[0].id).toBe("wiki-guid-1234");
+    expect(result.wikis[0].name).toBe("MyProject.wiki");
+    expect(result.wikis[0].type).toBe("codeWiki");
+    expect(result.wikis[0].versions).toEqual(["wikiMain"]);
+    expect(result.wikis[0].remoteUrl).toBe("https://example.com/repo");
+  });
+
+  it("returns empty array when no wikis exist (valid, not an error)", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [], count: 0 }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const result = await client.listWikis("EmptyProject");
+
+    expect(result.wikis).toEqual([]);
+    expect(result.count).toBe(0);
+  });
+
+  it("defaults remoteUrl to empty string when missing", async () => {
+    const raw = makeRawWiki();
+    delete (raw as Record<string, unknown>).remoteUrl;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [raw], count: 1 }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const result = await client.listWikis("MyProject");
+
+    expect(result.wikis[0].remoteUrl).toBe("");
+  });
+
+  it("throws AuthenticationError on 401", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ message: "Unauthorized" }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await expect(client.listWikis("MyProject")).rejects.toThrow(AuthenticationError);
+  });
+
+  it("throws NotFoundError on 404", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve({ message: "Project not found" }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await expect(client.listWikis("Missing")).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe("WikiClient.resolveProjectWikiId", () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("returns the projectWiki id when one exists", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [makeRawWiki({ id: "resolved-id", type: "projectWiki" })],
+          count: 1,
+        }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const id = await client.resolveProjectWikiId("MyProject");
+
+    expect(id).toBe("resolved-id");
+  });
+
+  it("throws ValidationError listing codeWiki names when no projectWiki exists", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [
+            makeRawWiki({ id: "cw-1", name: "Repo1.wiki", type: "codeWiki" }),
+            makeRawWiki({ id: "cw-2", name: "Repo2.wiki", type: "codeWiki" }),
+          ],
+          count: 2,
+        }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await expect(client.resolveProjectWikiId("MyProject")).rejects.toThrow(ValidationError);
+    await expect(client.resolveProjectWikiId("MyProject")).rejects.toThrow("Repo1.wiki");
+  });
+
+  it("throws ValidationError when no wikis exist at all", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [], count: 0 }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await expect(client.resolveProjectWikiId("EmptyProject")).rejects.toThrow(ValidationError);
+    await expect(client.resolveProjectWikiId("EmptyProject")).rejects.toThrow("No wikis found");
+  });
+
+  it("uses first projectWiki when multiple exist", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [
+            makeRawWiki({ id: "first-id", name: "Wiki1", type: "projectWiki" }),
+            makeRawWiki({ id: "second-id", name: "Wiki2", type: "projectWiki" }),
+          ],
+          count: 2,
+        }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const id = await client.resolveProjectWikiId("MyProject");
+
+    expect(id).toBe("first-id");
+  });
+});
 
 describe("WikiClient.getPage", () => {
   let originalFetch: typeof globalThis.fetch;

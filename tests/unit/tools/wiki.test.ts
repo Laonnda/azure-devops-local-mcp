@@ -4,7 +4,7 @@ import type { AdoConfig } from "../../../src/auth/types.js";
 import { registerWikiTools } from "../../../src/tools/wiki.js";
 import { WikiClient } from "../../../src/clients/wiki-client.js";
 import { wikiPathSchema, wikiIdSchema } from "../../../src/validation/common.js";
-import { AuthenticationError, NotFoundError } from "../../../src/utils/errors.js";
+import { AuthenticationError, NotFoundError, ValidationError } from "../../../src/utils/errors.js";
 
 function createConfig(overrides: Partial<AdoConfig> = {}): AdoConfig {
   return {
@@ -29,7 +29,7 @@ function makeWikiPage(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Wiki Tool Registration", () => {
-  it("registers all 3 wiki tools without error", () => {
+  it("registers all 4 wiki tools without error", () => {
     const server = new McpServer({ name: "test", version: "0.0.1" });
     registerWikiTools(server, createConfig());
     expect(server).toBeDefined();
@@ -309,6 +309,125 @@ describe("WikiClient.updatePage — request formation and response", () => {
     await expect(
       client.updatePage("TestProject", "missing-wiki", "/Page", "# Content"),
     ).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe("WikiClient.listWikis — via tool layer", () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("returns project-scoped wikis", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [
+            {
+              id: "wiki-guid",
+              name: "EMS.wiki",
+              type: "projectWiki",
+              projectId: "proj-guid",
+              remoteUrl: "https://dev.azure.com/testorg/EMS/_git/EMS.wiki",
+              versions: [{ version: "wikiMain" }],
+            },
+          ],
+          count: 1,
+        }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const result = await client.listWikis("EMS");
+
+    expect(result.count).toBe(1);
+    expect(result.wikis[0].name).toBe("EMS.wiki");
+    expect(result.wikis[0].type).toBe("projectWiki");
+  });
+
+  it("returns empty list when project has no wiki", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [], count: 0 }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const result = await client.listWikis("EmptyProject");
+
+    expect(result.wikis).toEqual([]);
+    expect(result.count).toBe(0);
+  });
+});
+
+describe("WikiClient.resolveProjectWikiId — auto-resolve for ado_wiki_list_pages", () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("resolves to the projectWiki id", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [
+            {
+              id: "auto-wiki-id",
+              name: "TestProject.wiki",
+              type: "projectWiki",
+              projectId: "p1",
+              versions: [],
+            },
+          ],
+          count: 1,
+        }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const id = await client.resolveProjectWikiId("TestProject");
+    expect(id).toBe("auto-wiki-id");
+  });
+
+  it("throws ValidationError naming available codeWikis when no projectWiki exists", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          value: [
+            { id: "cw1", name: "Repo.wiki", type: "codeWiki", projectId: "p1", versions: [] },
+          ],
+          count: 1,
+        }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await expect(client.resolveProjectWikiId("TestProject")).rejects.toThrow(ValidationError);
+    await expect(client.resolveProjectWikiId("TestProject")).rejects.toThrow("Repo.wiki");
+  });
+
+  it("throws ValidationError when project has no wikis at all", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ value: [], count: 0 }),
+    });
+
+    const client = new WikiClient(createConfig());
+    await expect(client.resolveProjectWikiId("TestProject")).rejects.toThrow(ValidationError);
   });
 });
 

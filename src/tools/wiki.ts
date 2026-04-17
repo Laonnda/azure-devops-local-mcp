@@ -15,9 +15,43 @@ import {
   skipSchema,
 } from "../validation/common.js";
 import { withErrorHandling } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 export function registerWikiTools(server: McpServer, config: AdoConfig): void {
   const client = new WikiClient(config);
+
+  // --- ado_wiki_list ---
+  server.registerTool(
+    "ado_wiki_list",
+    {
+      description:
+        "List wikis in an Azure DevOps project, or all wikis across the organisation when project is omitted. " +
+        "Returns id, name, type (projectWiki or codeWiki), projectId, remoteUrl, and versions for each wiki. " +
+        "Call this first to discover wikiId values before using ado_wiki_get_page or ado_wiki_list_pages. " +
+        "An empty result means the project exists but has no wiki provisioned. Requires vso.wiki PAT scope.",
+      inputSchema: {
+        project: projectNameSchema
+          .optional()
+          .describe("Project to list wikis for. Omit to list all wikis in the organisation."),
+      },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true,
+      },
+    },
+    withErrorHandling(async ({ project }) => {
+      const result = await client.listWikis(project);
+      logger.debug("ado_wiki_list", { project, count: result.count });
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    }),
+  );
 
   // --- ado_wiki_get_page ---
   server.registerTool(
@@ -59,9 +93,15 @@ export function registerWikiTools(server: McpServer, config: AdoConfig): void {
       description:
         "List pages in an Azure DevOps wiki with optional pagination. " +
         "Returns a list of pages with their paths, URLs, and metadata. " +
+        "When wikiId is omitted the project's default projectWiki is resolved automatically — " +
+        "use ado_wiki_list to discover available wikis if auto-resolve fails. " +
         "Use top and skip for pagination. Requires vso.wiki PAT scope.",
       inputSchema: {
-        wikiId: wikiIdSchema.describe("Wiki ID (GUID) or wiki name"),
+        wikiId: wikiIdSchema
+          .optional()
+          .describe(
+            "Wiki ID (GUID) or wiki name. When omitted, the project's projectWiki is used automatically.",
+          ),
         project: projectNameSchema.optional().describe("Project name. Uses default if omitted."),
         top: topSchema.describe("Max results (default 50, max 200)"),
         skip: skipSchema.describe("Number of results to skip for pagination"),
@@ -73,7 +113,8 @@ export function registerWikiTools(server: McpServer, config: AdoConfig): void {
     },
     withErrorHandling(async ({ wikiId, project, top, skip }) => {
       const resolvedProject = project ?? config.defaultProject ?? "";
-      const result = await client.listPages(resolvedProject, wikiId, { top, skip });
+      const resolvedWikiId = wikiId ?? (await client.resolveProjectWikiId(resolvedProject));
+      const result = await client.listPages(resolvedProject, resolvedWikiId, { top, skip });
 
       return {
         content: [
