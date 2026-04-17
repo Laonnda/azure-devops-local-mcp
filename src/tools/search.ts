@@ -18,7 +18,9 @@ export function registerSearchTools(server: McpServer, config: AdoConfig): void 
     {
       description:
         "Search for code across Azure DevOps repositories. Returns matching files with paths, " +
-        "repository names, and matched content snippets. Optionally scope to a project or specific repository. " +
+        "repository names, and character-offset positions of each match within the file. " +
+        "To read the matched text, fetch the file via the repository API. " +
+        "Optionally scope to a project or specific repository. " +
         "Does NOT search work items or wiki — use ado_workitems_query for work item search.",
       inputSchema: {
         searchText: z
@@ -63,7 +65,8 @@ export function registerSearchTools(server: McpServer, config: AdoConfig): void 
                   path: r.path,
                   repository: r.repository.name,
                   project: r.project.name,
-                  matches: r.matches.map((m) => m.content).slice(0, 5),
+                  matchCount: r.matches.length,
+                  matches: r.matches.slice(0, 5),
                 })),
               },
               null,

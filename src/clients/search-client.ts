@@ -11,7 +11,13 @@ export interface CodeSearchResult {
   path: string;
   repository: { name: string; id: string };
   project: { name: string };
-  matches: { content: string; charOffset: number; length: number }[];
+  /** Character-offset spans of each match within the file. Text must be fetched separately. */
+  matches: { charOffset: number; length: number }[];
+}
+
+interface RawHit {
+  charOffset: number;
+  length: number;
 }
 
 interface SearchResponse {
@@ -21,8 +27,8 @@ interface SearchResponse {
     path: string;
     repository: { name: string; id: string };
     project: { name: string };
-    matches: {
-      content?: { text: string; charOffset: number; length: number }[];
+    matches?: {
+      content?: RawHit[];
     };
   }[];
 }
@@ -64,12 +70,7 @@ export class SearchClient extends BaseClient {
         path: r.path,
         repository: r.repository,
         project: r.project,
-        matches:
-          r.matches?.content?.map((m) => ({
-            content: m.text,
-            charOffset: m.charOffset,
-            length: m.length,
-          })) || [],
+        matches: r.matches?.content ?? [],
       })),
       count: response.count,
     };
