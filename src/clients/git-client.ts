@@ -20,7 +20,7 @@ export interface PullRequestSummary {
   title: string;
   description: string;
   status: string;
-  createdBy: string;
+  createdBy: { displayName: string; id: string; uniqueName: string };
   creationDate: string;
   sourceRefName: string;
   targetRefName: string;
@@ -32,6 +32,8 @@ export interface PullRequestSummary {
 
 export interface PrReviewer {
   displayName: string;
+  id: string;
+  uniqueName: string;
   vote: number;
   isRequired: boolean;
 }
@@ -81,12 +83,12 @@ interface RawPullRequest {
   title: string;
   description: string;
   status: string;
-  createdBy: { displayName: string };
+  createdBy: { displayName: string; id?: string; uniqueName?: string };
   creationDate: string;
   sourceRefName: string;
   targetRefName: string;
   repository: { id: string; name: string };
-  reviewers: { displayName: string; vote: number; isRequired: boolean }[];
+  reviewers: { displayName: string; id?: string; uniqueName?: string; vote: number; isRequired: boolean }[];
   isDraft: boolean;
   url: string;
 }
@@ -284,13 +286,19 @@ function mapPullRequest(raw: RawPullRequest): PullRequestSummary {
     title: raw.title,
     description: raw.description || "",
     status: raw.status,
-    createdBy: raw.createdBy.displayName,
+    createdBy: {
+      displayName: raw.createdBy.displayName,
+      id: raw.createdBy.id ?? "",
+      uniqueName: raw.createdBy.uniqueName ?? "",
+    },
     creationDate: raw.creationDate,
     sourceRefName: raw.sourceRefName,
     targetRefName: raw.targetRefName,
     repository: raw.repository,
     reviewers: raw.reviewers.map((r) => ({
       displayName: r.displayName,
+      id: r.id ?? "",
+      uniqueName: r.uniqueName ?? "",
       vote: r.vote,
       isRequired: r.isRequired,
     })),

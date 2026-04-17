@@ -12,6 +12,7 @@ import {
   repositoryIdSchema,
   pullRequestIdSchema,
   topSchema,
+  guidSchema,
 } from "../validation/common.js";
 import { withErrorHandling } from "../utils/errors.js";
 
@@ -80,7 +81,7 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
           .enum(["active", "completed", "abandoned", "all"])
           .default("active")
           .describe("Filter by PR status. Defaults to 'active'."),
-        creatorId: z.string().max(256).optional().describe("Filter by creator's ID (GUID)"),
+        creatorId: guidSchema.optional().describe("Filter by creator's ID (GUID)"),
         top: topSchema.describe("Max results (default 50, max 200)"),
       },
       annotations: {
@@ -115,6 +116,8 @@ export function registerGitTools(server: McpServer, config: AdoConfig): void {
                   repository: pr.repository.name,
                   reviewers: pr.reviewers.map((r) => ({
                     name: r.displayName,
+                    id: r.id,
+                    uniqueName: r.uniqueName,
                     vote: r.vote,
                     required: r.isRequired,
                   })),

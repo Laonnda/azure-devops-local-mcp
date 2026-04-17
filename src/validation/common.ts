@@ -72,3 +72,12 @@ export const wikiTopSchema = z
   .max(100)
   .default(50)
   .describe("Maximum number of results to return (max 100)");
+
+/** Azure DevOps / AAD GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). */
+export const guidSchema = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    "Must be a valid GUID (e.g. 00000000-0000-0000-0000-000000000000)",
+  )
+  .describe("User or object GUID");

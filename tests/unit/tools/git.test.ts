@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AdoConfig } from "../../../src/auth/types.js";
 import { registerGitTools } from "../../../src/tools/git.js";
 import { GitClient } from "../../../src/clients/git-client.js";
+import { guidSchema } from "../../../src/validation/common.js";
 
 function createConfig(): AdoConfig {
   return {
@@ -93,7 +94,7 @@ describe("GitClient", () => {
     expect(calledUrl).toContain("searchCriteria.status=active");
   });
 
-  it("listPullRequests returns mapped PRs", async () => {
+  it("listPullRequests returns mapped PRs with id and uniqueName", async () => {
     const mockResponse = {
       value: [
         {
@@ -101,12 +102,24 @@ describe("GitClient", () => {
           title: "Add feature X",
           description: "Implements feature X",
           status: "active",
-          createdBy: { displayName: "John Doe" },
+          createdBy: {
+            displayName: "John Doe",
+            id: "aaaa-0001",
+            uniqueName: "john.doe@example.com",
+          },
           creationDate: "2026-03-27T10:00:00Z",
           sourceRefName: "refs/heads/feature/x",
           targetRefName: "refs/heads/main",
           repository: { id: "repo-1", name: "my-repo" },
-          reviewers: [{ displayName: "Jane", vote: 10, isRequired: true }],
+          reviewers: [
+            {
+              displayName: "Jane",
+              id: "bbbb-0002",
+              uniqueName: "jane@example.com",
+              vote: 10,
+              isRequired: true,
+            },
+          ],
           isDraft: false,
           url: "https://dev.azure.com/...",
         },
@@ -126,8 +139,49 @@ describe("GitClient", () => {
     expect(prs).toHaveLength(1);
     expect(prs[0].pullRequestId).toBe(42);
     expect(prs[0].title).toBe("Add feature X");
-    expect(prs[0].createdBy).toBe("John Doe");
+    expect(prs[0].createdBy.displayName).toBe("John Doe");
+    expect(prs[0].createdBy.id).toBe("aaaa-0001");
+    expect(prs[0].createdBy.uniqueName).toBe("john.doe@example.com");
     expect(prs[0].reviewers[0].displayName).toBe("Jane");
+    expect(prs[0].reviewers[0].id).toBe("bbbb-0002");
+    expect(prs[0].reviewers[0].uniqueName).toBe("jane@example.com");
+  });
+
+  it("listPullRequests falls back to empty strings when id/uniqueName absent", async () => {
+    const mockResponse = {
+      value: [
+        {
+          pullRequestId: 1,
+          title: "T",
+          description: "",
+          status: "active",
+          createdBy: { displayName: "Old API" },
+          creationDate: "2026-01-01T00:00:00Z",
+          sourceRefName: "refs/heads/feat",
+          targetRefName: "refs/heads/main",
+          repository: { id: "r1", name: "repo" },
+          reviewers: [{ displayName: "Rev", vote: 0, isRequired: false }],
+          isDraft: false,
+          url: "https://dev.azure.com/...",
+        },
+      ],
+      count: 1,
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(mockResponse),
+    });
+
+    const client = new GitClient(createConfig());
+    const prs = await client.listPullRequests("TestProject");
+
+    expect(prs[0].createdBy.displayName).toBe("Old API");
+    expect(prs[0].createdBy.id).toBe("");
+    expect(prs[0].createdBy.uniqueName).toBe("");
+    expect(prs[0].reviewers[0].id).toBe("");
+    expect(prs[0].reviewers[0].uniqueName).toBe("");
   });
 
   describe("createComment", () => {
@@ -298,5 +352,41 @@ describe("GitClient", () => {
     expect(threads).toHaveLength(1);
     expect(threads[0].comments[0].content).toBe("Looks good");
     expect(threads[0].threadContext?.filePath).toBe("/src/index.ts");
+  });
+});
+
+describe("guidSchema (MED-3 — creatorId GUID validation)", () => {
+  it("accepts a valid lowercase GUID", () => {
+    expect(() =>
+      guidSchema.parse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
+    ).not.toThrow();
+  });
+
+  it("accepts a valid uppercase GUID", () => {
+    expect(() =>
+      guidSchema.parse("A1B2C3D4-E5F6-7890-ABCD-EF1234567890"),
+    ).not.toThrow();
+  });
+
+  it("accepts an all-zeros GUID", () => {
+    expect(() =>
+      guidSchema.parse("00000000-0000-0000-0000-000000000000"),
+    ).not.toThrow();
+  });
+
+  it("rejects a plain string (no hyphens)", () => {
+    expect(() => guidSchema.parse("notAGuid")).toThrow();
+  });
+
+  it("rejects a GUID with wrong segment lengths", () => {
+    expect(() => guidSchema.parse("a1b2c3d4-e5f6-7890-abcd-ef123456789")).toThrow();
+  });
+
+  it("rejects an empty string", () => {
+    expect(() => guidSchema.parse("")).toThrow();
+  });
+
+  it("rejects a string with invalid hex characters", () => {
+    expect(() => guidSchema.parse("g1b2c3d4-e5f6-7890-abcd-ef1234567890")).toThrow();
   });
 });
