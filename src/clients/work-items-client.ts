@@ -34,9 +34,15 @@ export interface WorkItemRelation {
   attributes: Record<string, unknown>;
 }
 
+export interface WorkItemQueryResult {
+  items: WorkItemSummary[];
+  returnedCount: number;
+  totalCount: number;
+}
+
 interface WiqlResponse {
   queryType: string;
-  workItems: { id: number; url: string }[];
+  workItems?: { id: number; url: string }[];
 }
 
 interface WorkItemResponse {
@@ -64,6 +70,33 @@ function validateWiql(query: string): void {
   if (query.length > 2000) {
     throw new ValidationError("WIQL query exceeds maximum length of 2000 characters");
   }
+}
+
+/**
+ * Inject [System.TeamProject] = 'project' into a WIQL WHERE clause.
+ * No-ops when the query already references [System.TeamProject].
+ * Handles WHERE, ORDER BY, and bare SELECT forms.
+ */
+export function injectProjectFilter(wiql: string, project: string): string {
+  if (/\[System\.TeamProject\]/i.test(wiql)) {
+    return wiql;
+  }
+
+  const escapedProject = project.replace(/'/g, "''");
+  const condition = `[System.TeamProject] = '${escapedProject}'`;
+
+  const whereMatch = /\bWHERE\b/i.exec(wiql);
+  if (whereMatch) {
+    const idx = whereMatch.index + whereMatch[0].length;
+    return `${wiql.slice(0, idx)} ${condition} AND${wiql.slice(idx)}`;
+  }
+
+  const orderByMatch = /\bORDER\s+BY\b/i.exec(wiql);
+  if (orderByMatch) {
+    return `${wiql.slice(0, orderByMatch.index)}WHERE ${condition} ${wiql.slice(orderByMatch.index)}`;
+  }
+
+  return `${wiql} WHERE ${condition}`;
 }
 
 function mapWorkItem(raw: WorkItemResponse): WorkItemSummary {
@@ -109,35 +142,43 @@ export class WorkItemsClient extends BaseClient {
   }
 
   /**
-   * Run a WIQL query and return work item summaries.
+   * Run a WIQL query and return results with pagination metadata.
+   * Injects [System.TeamProject] into WHERE to enforce project scoping.
+   * Uses $top=20000 (ADO hard cap) to populate totalCount, then slices
+   * to the caller's top for the batch fetch.
    */
   async query(
     wiql: string,
     options: { project?: string; top?: number } = {},
-  ): Promise<WorkItemSummary[]> {
+  ): Promise<WorkItemQueryResult> {
     validateWiql(wiql);
 
     const project = this.resolveProject(options.project);
-    const top = options.top || 50;
+    const top = options.top ?? 50;
+    const scopedWiql = injectProjectFilter(wiql, project);
 
-    const wiqlResult = await this.request<WiqlResponse>(`wit/wiql?$top=${top}`, {
+    const wiqlResult = await this.request<WiqlResponse>(`wit/wiql?$top=20000`, {
       method: "POST",
-      body: { query: wiql },
+      body: { query: scopedWiql },
       project,
     });
 
-    if (!wiqlResult.workItems || wiqlResult.workItems.length === 0) {
-      return [];
+    const allIds = wiqlResult.workItems ?? [];
+    const totalCount = allIds.length;
+    const ids = allIds.slice(0, top).map((wi) => wi.id);
+
+    if (ids.length === 0) {
+      return { items: [], returnedCount: 0, totalCount: 0 };
     }
 
-    return this.batchGetWorkItems(
-      wiqlResult.workItems.map((wi) => wi.id),
-      project,
-    );
+    const items = await this.batchGetWorkItems(ids, project);
+    return { items, returnedCount: items.length, totalCount };
   }
 
   /**
    * Get a single work item by ID.
+   * If `project` is explicitly supplied and the item belongs to a different
+   * project, throws ValidationError naming the actual project.
    */
   async get(
     id: number,
@@ -150,6 +191,15 @@ export class WorkItemsClient extends BaseClient {
       project,
       useProjectScope: !!project,
     });
+
+    if (options.project) {
+      const actualProject = String(raw.fields["System.TeamProject"] || "");
+      if (actualProject && actualProject !== options.project) {
+        throw new ValidationError(
+          `Work item #${id} belongs to project '${actualProject}', not '${options.project}'.`,
+        );
+      }
+    }
 
     return mapWorkItemDetail(raw);
   }

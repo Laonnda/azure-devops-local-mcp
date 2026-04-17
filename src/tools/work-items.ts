@@ -38,13 +38,21 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
       },
     },
     withErrorHandling(async ({ query, project, top }) => {
-      const results = await client.query(query, { project, top });
+      const result = await client.query(query, { project, top });
 
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ count: results.length, workItems: results }, null, 2),
+            text: JSON.stringify(
+              {
+                returnedCount: result.returnedCount,
+                totalCount: result.totalCount,
+                workItems: result.items,
+              },
+              null,
+              2,
+            ),
           },
         ],
       };
@@ -57,12 +65,15 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
     {
       description:
         "Get full details of a single work item by its ID, including all fields, description, tags, and relations. " +
-        "Use ado_workitems_query or ado_workitems_list_recent to find work item IDs first.",
+        "Use ado_workitems_query or ado_workitems_list_recent to find work item IDs first. " +
+        "If project is supplied and the item belongs to a different project, the call will error with the actual project name.",
       inputSchema: {
         id: workItemIdSchema,
         project: projectNameSchema
           .optional()
-          .describe("Project scope. Optional — work items can be fetched by ID across projects."),
+          .describe(
+            "Project scope for validation. When provided, errors if the item belongs to a different project.",
+          ),
         expand: z
           .enum(["all", "relations", "fields", "none"])
           .default("all")
@@ -267,13 +278,21 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
       const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
       const wiql = `SELECT [System.Id], [System.Title], [System.State] FROM WorkItems ${where} ORDER BY [System.ChangedDate] DESC`;
 
-      const results = await client.query(wiql, { project, top });
+      const result = await client.query(wiql, { project, top });
 
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ count: results.length, workItems: results }, null, 2),
+            text: JSON.stringify(
+              {
+                returnedCount: result.returnedCount,
+                totalCount: result.totalCount,
+                workItems: result.items,
+              },
+              null,
+              2,
+            ),
           },
         ],
       };
