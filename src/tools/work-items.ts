@@ -6,9 +6,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { AdoConfig } from "../auth/types.js";
-import { WorkItemsClient } from "../clients/work-items-client.js";
+import { WorkItemsClient, LINK_TYPE_TO_REL } from "../clients/work-items-client.js";
 import { projectNameSchema, workItemIdSchema, topSchema } from "../validation/common.js";
 import { withErrorHandling } from "../utils/errors.js";
+
+const linkTypeSchema = z
+  .enum(Object.keys(LINK_TYPE_TO_REL) as [keyof typeof LINK_TYPE_TO_REL])
+  .describe(
+    "Link kind from fromId's perspective. " +
+      "'parent' makes toId the parent of fromId (drag under on the board). " +
+      "'child' makes toId a child of fromId. Also: related, predecessor, successor, " +
+      "duplicate, duplicate-of.",
+  );
 
 export function registerWorkItemsTools(server: McpServer, config: AdoConfig): void {
   const client = new WorkItemsClient(config);
@@ -226,6 +235,92 @@ export function registerWorkItemsTools(server: McpServer, config: AdoConfig): vo
             text: JSON.stringify(
               {
                 message: `Updated work item #${result.id}`,
+                workItem: result,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }),
+  );
+
+  // --- ado_workitems_link ---
+  server.registerTool(
+    "ado_workitems_link",
+    {
+      description:
+        "Link two work items. Typical use: set a Feature as the parent of a Task so it shows " +
+        "nested on the board (linkType='parent', fromId=Task, toId=Feature). Can also create " +
+        "child, related, predecessor, successor, duplicate, and duplicate-of links. " +
+        "Requires vso.work_write PAT scope.",
+      inputSchema: {
+        fromId: workItemIdSchema.describe("The work item that gets the new relation"),
+        toId: workItemIdSchema.describe("The target work item the link points to"),
+        linkType: linkTypeSchema,
+        project: projectNameSchema.optional().describe("Project scope (optional)"),
+        comment: z
+          .string()
+          .max(1000)
+          .optional()
+          .describe("Optional comment stored on the relation"),
+      },
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: true,
+      },
+    },
+    withErrorHandling(async ({ fromId, toId, linkType, project, comment }) => {
+      const result = await client.addRelation(fromId, toId, linkType, { project, comment });
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                message: `Linked #${fromId} --(${linkType})--> #${toId}`,
+                workItem: result,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }),
+  );
+
+  // --- ado_workitems_unlink ---
+  server.registerTool(
+    "ado_workitems_unlink",
+    {
+      description:
+        "Remove an existing link between two work items. Pass the same fromId/toId/linkType " +
+        "used when the link was created. Errors if the link is not present. " +
+        "Requires vso.work_write PAT scope.",
+      inputSchema: {
+        fromId: workItemIdSchema.describe("The work item to remove the relation from"),
+        toId: workItemIdSchema.describe("The target of the link to remove"),
+        linkType: linkTypeSchema,
+        project: projectNameSchema.optional().describe("Project scope (optional)"),
+      },
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: true,
+      },
+    },
+    withErrorHandling(async ({ fromId, toId, linkType, project }) => {
+      const result = await client.removeRelation(fromId, toId, linkType, { project });
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                message: `Removed ${linkType} link #${fromId} -> #${toId}`,
                 workItem: result,
               },
               null,

@@ -7,21 +7,9 @@
   "bin": {
     "ado-mcp": "dist/index.js"
   },
-  "files": [
-    "dist"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Laonnda/ado-mcp.git"
-  },
-  "keywords": [
-    "mcp",
-    "azure-devops",
-    "claude",
-    "model-context-protocol",
-    "devops"
-  ],
+  "files": ["dist/", "README.md", "LICENSE"],
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "dev": "tsx watch src/index.ts",
@@ -50,6 +38,12 @@
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Laonnda/ado-mcp.git"
+  },
+  "keywords": ["mcp", "azure-devops", "claude", "ai"],
+  "homepage": "https://github.com/Laonnda/ado-mcp",
   "engines": {
     "node": ">=20"
   },

@@ -20,6 +20,7 @@ interface RequestOptions {
   project?: string;
   useProjectScope?: boolean;
   timeoutMs?: number;
+  apiVersion?: string;
   /** Additional HTTP headers merged into the request (e.g. If-Match for optimistic concurrency). */
   extraHeaders?: Record<string, string>;
 }
@@ -82,6 +83,7 @@ export class BaseClient {
       project,
       useProjectScope = true,
       timeoutMs = DEFAULT_TIMEOUT_MS,
+      apiVersion = API_VERSION,
       extraHeaders,
     } = options;
 
@@ -93,7 +95,7 @@ export class BaseClient {
     }
 
     const separator = path.includes("?") ? "&" : "?";
-    const url = `${basePath}/${path}${separator}api-version=${API_VERSION}`;
+    const url = `${basePath}/${path}${separator}api-version=${apiVersion}`;
 
     const authHeader = await this.config.auth.getAuthHeader();
 
