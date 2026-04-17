@@ -58,9 +58,17 @@ export const wikiPathSchema = z
   .string()
   .min(1)
   .max(512)
-  .regex(/^[a-zA-Z0-9 _.\-/]+$/, "Invalid wiki path characters")
   .refine(
     (val) => !val.includes("../") && !val.includes("..\\"),
     "Path traversal patterns are not allowed in wiki paths",
   )
   .describe("Wiki page path (e.g. /MyPage or /Parent/Child)");
+
+/** Pagination: top for wiki list-pages (Azure DevOps API hard-caps at 100). */
+export const wikiTopSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(100)
+  .default(50)
+  .describe("Maximum number of results to return (max 100)");

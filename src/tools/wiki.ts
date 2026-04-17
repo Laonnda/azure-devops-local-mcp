@@ -11,8 +11,8 @@ import {
   projectNameSchema,
   wikiIdSchema,
   wikiPathSchema,
-  topSchema,
-  skipSchema,
+  wikiTopSchema,
+  continuationTokenSchema,
 } from "../validation/common.js";
 import { withErrorHandling } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
@@ -95,7 +95,8 @@ export function registerWikiTools(server: McpServer, config: AdoConfig): void {
         "Returns a list of pages with their paths, URLs, and metadata. " +
         "When wikiId is omitted the project's default projectWiki is resolved automatically — " +
         "use ado_wiki_list to discover available wikis if auto-resolve fails. " +
-        "Use top and skip for pagination. Requires vso.wiki PAT scope.",
+        "Use top to limit results; pass the returned continuationToken for subsequent pages. " +
+        "Requires vso.wiki PAT scope.",
       inputSchema: {
         wikiId: wikiIdSchema
           .optional()
@@ -103,18 +104,23 @@ export function registerWikiTools(server: McpServer, config: AdoConfig): void {
             "Wiki ID (GUID) or wiki name. When omitted, the project's projectWiki is used automatically.",
           ),
         project: projectNameSchema.optional().describe("Project name. Uses default if omitted."),
-        top: topSchema.describe("Max results (default 50, max 200)"),
-        skip: skipSchema.describe("Number of results to skip for pagination"),
+        top: wikiTopSchema.describe("Max results (default 50, max 100)"),
+        continuationToken: continuationTokenSchema.describe(
+          "Continuation token from a previous response to fetch the next page of results",
+        ),
       },
       annotations: {
         readOnlyHint: true,
         openWorldHint: true,
       },
     },
-    withErrorHandling(async ({ wikiId, project, top, skip }) => {
+    withErrorHandling(async ({ wikiId, project, top, continuationToken }) => {
       const resolvedProject = project ?? config.defaultProject ?? "";
       const resolvedWikiId = wikiId ?? (await client.resolveProjectWikiId(resolvedProject));
-      const result = await client.listPages(resolvedProject, resolvedWikiId, { top, skip });
+      const result = await client.listPages(resolvedProject, resolvedWikiId, {
+        top,
+        continuationToken,
+      });
 
       return {
         content: [

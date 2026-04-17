@@ -76,8 +76,27 @@ describe("wikiPathSchema validation", () => {
     expect(() => wikiPathSchema.parse(longPath)).toThrow();
   });
 
-  it("rejects paths with invalid characters", () => {
-    expect(() => wikiPathSchema.parse("/page?query=1")).toThrow();
+  it("accepts path with + character (Team+Docs pages)", () => {
+    expect(() => wikiPathSchema.parse("/Team+Docs/Architecture")).not.toThrow();
+  });
+
+  it("accepts path with Scandinavian letters (æ, ø, å)", () => {
+    expect(() => wikiPathSchema.parse("/Statusmøte")).not.toThrow();
+    expect(() => wikiPathSchema.parse("/Møtereferat/Ørsted")).not.toThrow();
+  });
+});
+
+describe("wikiTopSchema validation", () => {
+  it("accepts values between 1 and 100", async () => {
+    const { wikiTopSchema } = await import("../../../src/validation/common.js");
+    expect(() => wikiTopSchema.parse(1)).not.toThrow();
+    expect(() => wikiTopSchema.parse(100)).not.toThrow();
+  });
+
+  it("rejects values above 100 (Azure DevOps API limit)", async () => {
+    const { wikiTopSchema } = await import("../../../src/validation/common.js");
+    expect(() => wikiTopSchema.parse(101)).toThrow();
+    expect(() => wikiTopSchema.parse(200)).toThrow();
   });
 });
 
@@ -186,19 +205,21 @@ describe("WikiClient.listPages — response mapping and pagination", () => {
     expect(result.pages.map((p) => p.path)).toEqual(["/Page1", "/Page2", "/Page3"]);
   });
 
-  it("passes top and skip to the API", async () => {
+  it("passes top and continuationToken to the API in the request body", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () => Promise.resolve({ value: [], count: 0 }),
+      json: () => Promise.resolve({ value: [] }),
     });
 
     const client = new WikiClient(createConfig());
-    await client.listPages("TestProject", "my-wiki", { top: 5, skip: 10 });
+    await client.listPages("TestProject", "my-wiki", { top: 5, continuationToken: "ct-xyz" });
 
-    const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(calledUrl).toContain("%24top=5");
-    expect(calledUrl).toContain("%24skip=10");
+    const calledOptions = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as RequestInit;
+    const body = JSON.parse(calledOptions.body as string) as Record<string, unknown>;
+    expect(body.top).toBe(5);
+    expect(body.continuationToken).toBe("ct-xyz");
   });
 
   it("handles empty results gracefully", async () => {
