@@ -10,6 +10,7 @@ import { registerGitTools } from "./tools/git.js";
 import { registerSearchTools } from "./tools/search.js";
 import { registerWikiTools } from "./tools/wiki.js";
 import { registerPipelinesTools } from "./tools/pipelines.js";
+import { registerTestPlansTools } from "./tools/test-plans.js";
 
 export function createServer(config: AdoConfig): McpServer {
   const server = new McpServer(
@@ -21,7 +22,8 @@ export function createServer(config: AdoConfig): McpServer {
       instructions:
         "Azure DevOps MCP server. Use ado_projects_list to discover projects first. " +
         "Then use work item and git tools scoped to a project. " +
-        "Write operations (create, update, comment) require appropriate PAT scopes.",
+        "Write operations (create, update, comment) require appropriate PAT scopes. " +
+        "Test plan tools require vso.test (read) or vso.test_write (create/update).",
     },
   );
 
@@ -31,6 +33,7 @@ export function createServer(config: AdoConfig): McpServer {
   registerSearchTools(server, config);
   registerWikiTools(server, config);
   registerPipelinesTools(server, config);
+  registerTestPlansTools(server, config);
 
   return server;
 }

@@ -14,6 +14,7 @@ MCP (Model Context Protocol) server for Azure DevOps. Connects Claude Code and C
 | **Code Search** | Full-text search across all repositories |
 | **Wiki** | Read and update wiki pages |
 | **Projects** | List all projects in the organisation |
+| **Test Plans** | List, create, and get test plans; manage suites; add and list test cases |
 
 ## Installation
 
@@ -83,6 +84,8 @@ Create a PAT in Azure DevOps (profile icon → Personal access tokens) with only
 | Code search | Code — Read |
 | Wiki (read) | Wiki — Read |
 | Wiki (write) | Wiki — Read & Write |
+| Test plans, suites, test cases (read) | Test Management — Read |
+| Test plans, suites, test cases (create/update) | Test Management — Read & Write |
 
 ## Configuration
 
