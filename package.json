@@ -1,6 +1,6 @@
 {
   "name": "ado-mcp",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "MCP server for Azure DevOps — connect Claude to work items, repos, pipelines, and more",
   "type": "module",
   "main": "dist/index.js",
