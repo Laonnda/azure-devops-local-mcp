@@ -17,6 +17,7 @@ npm run build
 echo "Copying files..."
 cp -r dist "$DEST/"
 cp package.json "$DEST/"
+cp setup.bat "$DEST/"
 cp setup.ps1 "$DEST/"
 cp distribution/INSTALL.txt "$DEST/"
 
