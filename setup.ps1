@@ -1,8 +1,18 @@
 # ado-mcp Setup Script
 # Run this once to connect ado-mcp to Claude Desktop.
-# Right-click this file and choose "Run with PowerShell".
+# Right-click this file and choose "Run with PowerShell",
+# OR double-click setup.bat if you see a script-blocked error.
 
 $ErrorActionPreference = "Stop"
+
+# Keep the window open on any unhandled error
+trap {
+    Write-Host ""
+    Write-Host "  Unexpected error: $_" -ForegroundColor Red
+    Write-Host ""
+    Read-Host "  Press Enter to exit"
+    exit 1
+}
 
 Write-Host ""
 Write-Host "  ado-mcp Setup" -ForegroundColor Cyan
@@ -27,11 +37,23 @@ $serverPath = Join-Path $PSScriptRoot "dist\index.js"
 $configPath  = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
 $configDir   = Split-Path $configPath
 
+# Verify Node.js is available
+$nodePath = Get-Command node -ErrorAction SilentlyContinue
+if (-not $nodePath) {
+    Write-Host ""
+    Write-Host "  ERROR: Node.js was not found in PATH." -ForegroundColor Red
+    Write-Host "  Install Node.js (LTS) from https://nodejs.org, then re-run this script." -ForegroundColor Red
+    Write-Host ""
+    Read-Host "  Press Enter to exit"
+    exit 1
+}
+
 # Verify ado-mcp files are present
 if (-not (Test-Path $serverPath)) {
     Write-Host ""
     Write-Host "  ERROR: Could not find $serverPath" -ForegroundColor Red
     Write-Host "  Make sure you extracted the full ado-mcp ZIP before running this script." -ForegroundColor Red
+    Write-Host ""
     Read-Host "  Press Enter to exit"
     exit 1
 }
@@ -52,6 +74,9 @@ if (-not $config.PSObject.Properties["mcpServers"]) {
     $config | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue ([PSCustomObject]@{})
 }
 
+# Normalise to forward slashes so JSON serialisation is unambiguous on Windows
+$serverPathJson = $serverPath -replace '\\', '/'
+
 # Build ado entry
 $envObj = [PSCustomObject]@{
     ADO_ORG_URL = $orgUrl
@@ -63,7 +88,7 @@ if ($project -ne "") {
 
 $adoEntry = [PSCustomObject]@{
     command = "node"
-    args    = @($serverPath)
+    args    = @($serverPathJson)
     env     = $envObj
 }
 

@@ -103,8 +103,11 @@ async function main(): Promise<void> {
       httpServer.close();
       process.exit(0);
     };
-    process.on("SIGTERM", shutdown);
     process.on("SIGINT", shutdown);
+    // SIGTERM is not supported on Windows; guard to avoid unhandled-signal warnings
+    if (process.platform !== "win32") {
+      process.on("SIGTERM", shutdown);
+    }
   } else {
     // Default: stdio transport for Claude Code
     const transport = new StdioServerTransport();
@@ -116,8 +119,11 @@ async function main(): Promise<void> {
       await transport.close();
       process.exit(0);
     };
-    process.on("SIGTERM", shutdown);
     process.on("SIGINT", shutdown);
+    // SIGTERM is not supported on Windows; guard to avoid unhandled-signal warnings
+    if (process.platform !== "win32") {
+      process.on("SIGTERM", shutdown);
+    }
   }
 }
 
