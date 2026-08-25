@@ -145,10 +145,10 @@ export class TestPlansClient extends BaseClient {
     const resolvedProject = this.resolveProject(project);
     const top = opts.top ?? 50;
 
-    const raw = await this.request<RawListResponse<RawTestPlan>>(
-      `testplan/plans?$top=${top}`,
-      { project: resolvedProject, apiVersion: TEST_PLAN_API_VERSION },
-    );
+    const raw = await this.request<RawListResponse<RawTestPlan>>(`testplan/plans?$top=${top}`, {
+      project: resolvedProject,
+      apiVersion: TEST_PLAN_API_VERSION,
+    });
 
     return (raw.value || []).map(mapTestPlan);
   }
@@ -160,10 +160,10 @@ export class TestPlansClient extends BaseClient {
   async getPlan(project: string, planId: number): Promise<TestPlan> {
     const resolvedProject = this.resolveProject(project);
 
-    const raw = await this.request<RawTestPlan>(
-      `testplan/plans/${planId}`,
-      { project: resolvedProject, apiVersion: TEST_PLAN_API_VERSION },
-    );
+    const raw = await this.request<RawTestPlan>(`testplan/plans/${planId}`, {
+      project: resolvedProject,
+      apiVersion: TEST_PLAN_API_VERSION,
+    });
 
     return mapTestPlan(raw);
   }
@@ -186,10 +186,12 @@ export class TestPlansClient extends BaseClient {
     if (opts.startDate) body.startDate = opts.startDate;
     if (opts.endDate) body.endDate = opts.endDate;
 
-    const raw = await this.request<RawTestPlan>(
-      `testplan/plans`,
-      { method: "POST", body, project: resolvedProject, apiVersion: TEST_PLAN_API_VERSION },
-    );
+    const raw = await this.request<RawTestPlan>(`testplan/plans`, {
+      method: "POST",
+      body,
+      project: resolvedProject,
+      apiVersion: TEST_PLAN_API_VERSION,
+    });
 
     return mapTestPlan(raw);
   }
@@ -245,10 +247,12 @@ export class TestPlansClient extends BaseClient {
       body.queryString = opts.queryString;
     }
 
-    const raw = await this.request<RawTestSuite>(
-      `testplan/Plans/${planId}/suites`,
-      { method: "POST", body, project: resolvedProject, apiVersion: TEST_PLAN_API_VERSION },
-    );
+    const raw = await this.request<RawTestSuite>(`testplan/Plans/${planId}/suites`, {
+      method: "POST",
+      body,
+      project: resolvedProject,
+      apiVersion: TEST_PLAN_API_VERSION,
+    });
 
     return mapTestSuite(raw);
   }
@@ -278,7 +282,7 @@ export class TestPlansClient extends BaseClient {
       { method: "POST", body, project: resolvedProject, apiVersion: TEST_PLAN_API_VERSION },
     );
 
-    const items = Array.isArray(raw) ? raw : (raw.value || []);
+    const items = Array.isArray(raw) ? raw : raw.value || [];
     return items.map(mapTestCase);
   }
 

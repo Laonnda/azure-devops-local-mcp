@@ -595,8 +595,7 @@ describe("TestPlansClient.addTestCasesToSuite — request body and response hand
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () =>
-        Promise.resolve([makeRawTestCase(101), makeRawTestCase(102)]),
+      json: () => Promise.resolve([makeRawTestCase(101), makeRawTestCase(102)]),
     });
 
     const client = new TestPlansClient(createConfig());
@@ -629,8 +628,7 @@ describe("TestPlansClient.addTestCasesToSuite — request body and response hand
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () =>
-        Promise.resolve({ count: 1, value: [makeRawTestCase(55)] }),
+      json: () => Promise.resolve({ count: 1, value: [makeRawTestCase(55)] }),
     });
 
     const client = new TestPlansClient(createConfig());
@@ -686,8 +684,7 @@ describe("TestPlansClient.listTestCasesInSuite — response mapping", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: () =>
-        Promise.resolve({ count: 2, value: [makeRawTestCase(10), makeRawTestCase(11)] }),
+      json: () => Promise.resolve({ count: 2, value: [makeRawTestCase(10), makeRawTestCase(11)] }),
     });
 
     const client = new TestPlansClient(createConfig());

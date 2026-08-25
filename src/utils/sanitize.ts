@@ -16,6 +16,12 @@ const PATTERNS: RegExp[] = [
 
 const REDACTED = "[REDACTED]";
 
+/**
+ * Keys that match the sensitive-key heuristics below but carry pagination
+ * state, never credentials. Compared against the lowercased key.
+ */
+const SAFE_KEYS = new Set(["continuationtoken", "nextpagetoken", "pagetoken", "skiptoken"]);
+
 export function sanitizeString(input: string): string {
   let result = input;
   for (const pattern of PATTERNS) {
@@ -39,7 +45,9 @@ export function sanitizeObject<T>(obj: T): T {
     const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       const lowerKey = key.toLowerCase();
-      if (
+      if (SAFE_KEYS.has(lowerKey)) {
+        sanitized[key] = sanitizeObject(value);
+      } else if (
         lowerKey.includes("token") ||
         lowerKey.includes("password") ||
         lowerKey.includes("secret") ||

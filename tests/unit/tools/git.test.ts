@@ -249,7 +249,69 @@ describe("GitClient", () => {
       publishedDate: "2026-04-07T12:00:00Z",
     };
 
-    it("reply to thread returns correct comment ID (not thread ID)", async () => {
+    // The thread-comments POST endpoint returns the created Comment, not the
+    // full thread (Azure DevOps REST: Pull Request Thread Comments - Create).
+    const commentResponse = {
+      id: 102,
+      content: "Reply comment",
+      author: { displayName: "Bob" },
+      publishedDate: "2026-04-07T13:00:00Z",
+      commentType: "text",
+    };
+
+    it("reply to thread maps the Comment response into a thread-shaped result", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(commentResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "Reply comment",
+        threadId: 10,
+      });
+
+      expect(result.id).toBe(10);
+      expect(result.comments).toHaveLength(1);
+      expect(result.comments[0].id).toBe(102);
+      expect(result.comments[0].id).not.toBe(result.id);
+    });
+
+    it("reply to thread returns author from Comment response", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(commentResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "Reply comment",
+        threadId: 10,
+      });
+
+      expect(result.comments[0].author).toBe("Bob");
+    });
+
+    it("reply to thread returns timestamps from Comment response", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(commentResponse),
+      });
+
+      const client = new GitClient(createConfig());
+      const result = await client.createComment("TestProject", "repo-1", 42, {
+        content: "Reply comment",
+        threadId: 10,
+      });
+
+      expect(result.publishedDate).toBe("2026-04-07T13:00:00Z");
+      expect(result.comments[0].publishedDate).toBe("2026-04-07T13:00:00Z");
+    });
+
+    it("reply to thread still maps servers that return the full thread", async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
@@ -263,57 +325,9 @@ describe("GitClient", () => {
       });
 
       expect(result.id).toBe(10);
-      expect(result.comments[1].id).toBe(102);
-      expect(result.comments[1].id).not.toBe(result.id);
-    });
-
-    it("reply to thread returns author from API response", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(threadResponse),
-      });
-
-      const client = new GitClient(createConfig());
-      const result = await client.createComment("TestProject", "repo-1", 42, {
-        content: "Reply comment",
-        threadId: 10,
-      });
-
-      expect(result.comments[1].author).toBe("Bob");
-    });
-
-    it("reply to thread returns timestamps from API response", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(threadResponse),
-      });
-
-      const client = new GitClient(createConfig());
-      const result = await client.createComment("TestProject", "repo-1", 42, {
-        content: "Reply comment",
-        threadId: 10,
-      });
-
-      expect(result.publishedDate).toBe("2026-04-07T12:00:00Z");
-      expect(result.comments[1].publishedDate).toBe("2026-04-07T13:00:00Z");
-    });
-
-    it("reply to thread returns actual thread status", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(threadResponse),
-      });
-
-      const client = new GitClient(createConfig());
-      const result = await client.createComment("TestProject", "repo-1", 42, {
-        content: "Reply comment",
-        threadId: 10,
-      });
-
       expect(result.status).toBe("active");
+      expect(result.comments[1].id).toBe(102);
+      expect(result.comments[1].author).toBe("Bob");
     });
 
     it("create new thread returns mapped thread", async () => {

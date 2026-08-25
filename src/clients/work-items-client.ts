@@ -109,7 +109,11 @@ function validateWiql(query: string): void {
 /**
  * Inject [System.TeamProject] = 'project' into a WIQL WHERE clause.
  * No-ops when the query already references [System.TeamProject].
- * Handles WHERE, ORDER BY, and bare SELECT forms.
+ * Handles WHERE, ORDER BY, ASOF, and bare SELECT forms.
+ *
+ * Existing WHERE conditions are wrapped in parentheses: AND binds tighter
+ * than OR in WIQL, so `TP = 'X' AND a OR b` would leave the OR arm unscoped
+ * and match work items from other projects.
  */
 export function injectProjectFilter(wiql: string, project: string): string {
   if (/\[System\.TeamProject\]/i.test(wiql)) {
@@ -118,16 +122,22 @@ export function injectProjectFilter(wiql: string, project: string): string {
 
   const escapedProject = project.replace(/'/g, "''");
   const condition = `[System.TeamProject] = '${escapedProject}'`;
+  const tailPattern = /\b(ORDER\s+BY|ASOF)\b/i;
 
   const whereMatch = /\bWHERE\b/i.exec(wiql);
   if (whereMatch) {
-    const idx = whereMatch.index + whereMatch[0].length;
-    return `${wiql.slice(0, idx)} ${condition} AND${wiql.slice(idx)}`;
+    const condStart = whereMatch.index + whereMatch[0].length;
+    const tailMatch = tailPattern.exec(wiql.slice(condStart));
+    const condEnd = tailMatch ? condStart + tailMatch.index : wiql.length;
+    const existing = wiql.slice(condStart, condEnd).trim();
+    const tail = wiql.slice(condEnd).trim();
+    const scoped = `${wiql.slice(0, condStart)} ${condition} AND (${existing})`;
+    return tail ? `${scoped} ${tail}` : scoped;
   }
 
-  const orderByMatch = /\bORDER\s+BY\b/i.exec(wiql);
-  if (orderByMatch) {
-    return `${wiql.slice(0, orderByMatch.index)}WHERE ${condition} ${wiql.slice(orderByMatch.index)}`;
+  const tailMatch = tailPattern.exec(wiql);
+  if (tailMatch) {
+    return `${wiql.slice(0, tailMatch.index)}WHERE ${condition} ${wiql.slice(tailMatch.index)}`;
   }
 
   return `${wiql} WHERE ${condition}`;

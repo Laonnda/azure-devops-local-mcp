@@ -109,16 +109,18 @@ interface ThreadsResponse {
   count: number;
 }
 
+interface RawComment {
+  id: number;
+  content: string;
+  author: { displayName: string };
+  publishedDate: string;
+  commentType: string;
+}
+
 interface RawThread {
   id: number;
   status: string;
-  comments: {
-    id: number;
-    content: string;
-    author: { displayName: string };
-    publishedDate: string;
-    commentType: string;
-  }[];
+  comments: RawComment[];
   threadContext?: {
     filePath: string;
     rightFileStart?: { line: number };
@@ -233,8 +235,10 @@ export class GitClient extends BaseClient {
     },
   ): Promise<PrThread> {
     if (options.threadId) {
-      // Reply to existing thread
-      const raw = await this.request<RawThread>(
+      // Reply to existing thread. The thread-comments endpoint returns the
+      // created Comment (not the thread), so wrap it in a thread-shaped
+      // result. Some server versions return the full thread; handle both.
+      const raw = await this.request<RawComment | RawThread>(
         `git/repositories/${encodeURIComponent(repositoryId)}/pullrequests/${pullRequestId}/threads/${options.threadId}/comments`,
         {
           method: "POST",
@@ -245,7 +249,16 @@ export class GitClient extends BaseClient {
           project,
         },
       );
-      return mapThread(raw);
+      if (isRawThread(raw)) {
+        return mapThread(raw);
+      }
+      return {
+        id: options.threadId,
+        status: "",
+        comments: [mapComment(raw)],
+        isDeleted: false,
+        publishedDate: raw.publishedDate,
+      };
     }
 
     // Create new thread
@@ -288,17 +301,25 @@ export class GitClient extends BaseClient {
   }
 }
 
+function isRawThread(raw: RawComment | RawThread): raw is RawThread {
+  return Array.isArray((raw as RawThread).comments);
+}
+
+function mapComment(raw: RawComment): PrComment {
+  return {
+    id: raw.id,
+    content: truncateString(raw.content || "", COMMENT_MAX_CHARS),
+    author: raw.author?.displayName ?? "",
+    publishedDate: raw.publishedDate,
+    commentType: raw.commentType,
+  };
+}
+
 function mapThread(raw: RawThread): PrThread {
   return {
     id: raw.id,
     status: raw.status || "",
-    comments: raw.comments.map((c) => ({
-      id: c.id,
-      content: truncateString(c.content || "", COMMENT_MAX_CHARS),
-      author: c.author.displayName,
-      publishedDate: c.publishedDate,
-      commentType: c.commentType,
-    })),
+    comments: raw.comments.map(mapComment),
     threadContext: raw.threadContext,
     isDeleted: raw.isDeleted,
     publishedDate: raw.publishedDate,

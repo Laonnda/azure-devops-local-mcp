@@ -271,3 +271,39 @@ describe("case 13: injectProjectFilter — project name with single quote", () =
     expect(result).toContain("[System.TeamProject] = 'O''Brien Project'");
   });
 });
+
+// =============================================================================
+// Regression — OR precedence must not bypass project scoping
+// =============================================================================
+
+describe("case 14: injectProjectFilter — WHERE with top-level OR", () => {
+  it("parenthesizes existing conditions so the OR arm stays project-scoped", () => {
+    const wiql =
+      "SELECT [System.Id] FROM WorkItems WHERE [System.State] = 'Active' OR [System.State] = 'New'";
+    const result = injectProjectFilter(wiql, "EMS");
+
+    expect(result).toContain(
+      "WHERE [System.TeamProject] = 'EMS' AND ([System.State] = 'Active' OR [System.State] = 'New')",
+    );
+  });
+
+  it("parenthesizes conditions but leaves ORDER BY outside the parentheses", () => {
+    const wiql =
+      "SELECT [System.Id] FROM WorkItems WHERE [System.State] = 'Active' OR [System.State] = 'New' ORDER BY [System.ChangedDate] DESC";
+    const result = injectProjectFilter(wiql, "EMS");
+
+    expect(result).toContain(
+      "WHERE [System.TeamProject] = 'EMS' AND ([System.State] = 'Active' OR [System.State] = 'New') ORDER BY [System.ChangedDate] DESC",
+    );
+  });
+
+  it("leaves ASOF outside the parentheses", () => {
+    const wiql =
+      "SELECT [System.Id] FROM WorkItems WHERE [System.State] = 'Active' ASOF '2026-01-01'";
+    const result = injectProjectFilter(wiql, "EMS");
+
+    expect(result).toContain(
+      "WHERE [System.TeamProject] = 'EMS' AND ([System.State] = 'Active') ASOF '2026-01-01'",
+    );
+  });
+});

@@ -71,4 +71,38 @@ describe("sanitizeObject", () => {
     expect(sanitizeObject(null)).toBeNull();
     expect(sanitizeObject(undefined)).toBeUndefined();
   });
+
+  it("preserves pagination tokens (regression: wiki paging was redacted)", () => {
+    const input = {
+      value: [{ path: "/Page" }],
+      continuationToken: "12345-abcdef",
+    };
+    const result = sanitizeObject(input);
+    expect(result.continuationToken).toBe("12345-abcdef");
+  });
+
+  it("preserves pagination tokens in nested objects regardless of casing", () => {
+    const input = {
+      outer: { ContinuationToken: "tok-1", nextPageToken: "tok-2", skipToken: "tok-3" },
+    };
+    const result = sanitizeObject(input);
+    const outer = result.outer as Record<string, string>;
+    expect(outer.ContinuationToken).toBe("tok-1");
+    expect(outer.nextPageToken).toBe("tok-2");
+    expect(outer.skipToken).toBe("tok-3");
+  });
+
+  it("still redacts credential-bearing token keys", () => {
+    const input = {
+      accessToken: "secret-1",
+      refresh_token: "secret-2",
+      token: "secret-3",
+      personalAccessToken: "secret-4",
+    };
+    const result = sanitizeObject(input);
+    expect(result.accessToken).toBe("[REDACTED]");
+    expect(result.refresh_token).toBe("[REDACTED]");
+    expect(result.token).toBe("[REDACTED]");
+    expect(result.personalAccessToken).toBe("[REDACTED]");
+  });
 });

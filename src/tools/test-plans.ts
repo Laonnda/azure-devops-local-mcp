@@ -318,7 +318,9 @@ export function registerTestPlansTools(server: McpServer, config: AdoConfig): vo
     },
     withErrorHandling(async ({ project, planId, suiteId, top }) => {
       const resolvedProject = project ?? config.defaultProject ?? "";
-      const testCases = await client.listTestCasesInSuite(resolvedProject, planId, suiteId, { top });
+      const testCases = await client.listTestCasesInSuite(resolvedProject, planId, suiteId, {
+        top,
+      });
 
       return {
         content: [

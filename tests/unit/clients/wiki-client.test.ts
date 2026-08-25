@@ -467,6 +467,19 @@ describe("WikiClient.listPages", () => {
     expect(body.continuationToken).toBe("tok123");
   });
 
+  it("returns the response continuationToken unredacted (regression: sanitizer broke paging)", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ ...makeListResponse(), continuationToken: "next-456" }),
+    });
+
+    const client = new WikiClient(createConfig());
+    const result = await client.listPages("TestProject", "my-wiki", { top: 1 });
+
+    expect(result.continuationToken).toBe("next-456");
+  });
+
   it("omits top and continuationToken from body when not provided", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
