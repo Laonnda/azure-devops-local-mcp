@@ -1,0 +1,66 @@
+{
+  "manifest_version": "0.3",
+  "name": "ado-mcp",
+  "display_name": "Azure DevOps (ado-mcp)",
+  "version": "0.2.0",
+  "description": "MCP server for Azure DevOps — work items, repos, pull requests, pipelines, wikis, test plans, and code search",
+  "long_description": "Connects Claude to the Azure DevOps REST API (v7.2). Query and update work items, browse repositories and pull requests, trigger and inspect pipelines, read and update wiki pages, manage test plans, and search code across projects. Authenticates with a Personal Access Token (PAT).",
+  "author": {
+    "name": "Laonnda",
+    "url": "https://github.com/Laonnda"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Laonnda/ado-mcp.git"
+  },
+  "license": "MIT",
+  "keywords": ["azure-devops", "mcp", "claude", "claude-desktop", "mcpb", "work-items", "pipelines", "git"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "ADO_ORG_URL": "${user_config.ado_org_url}",
+        "ADO_PAT": "${user_config.ado_pat}",
+        "ADO_DEFAULT_PROJECT": "${user_config.ado_default_project}",
+        "ADO_LOG_LEVEL": "${user_config.ado_log_level}"
+      }
+    }
+  },
+  "user_config": {
+    "ado_org_url": {
+      "type": "string",
+      "title": "Azure DevOps organization URL",
+      "description": "Full organization URL, e.g. https://dev.azure.com/yourorg",
+      "required": true
+    },
+    "ado_pat": {
+      "type": "string",
+      "title": "Personal Access Token (PAT)",
+      "description": "Azure DevOps PAT. Minimum scopes: Work Items (read/write), Code (read), Build (read/execute), Wiki (read/write), Test Management (read/write). Stored securely by the host app.",
+      "sensitive": true,
+      "required": true
+    },
+    "ado_default_project": {
+      "type": "string",
+      "title": "Default project (optional)",
+      "description": "Project used when a tool call does not specify one. Leave empty to require an explicit project per call.",
+      "required": false
+    },
+    "ado_log_level": {
+      "type": "string",
+      "title": "Log level (optional)",
+      "description": "Server-side log level: debug, info, warn, or error",
+      "default": "info",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}
