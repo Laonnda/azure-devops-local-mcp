@@ -31,6 +31,7 @@ What you can do:
 | **Code Search** | Full-text search across all repositories |
 | **Wiki** | Read and update wiki pages |
 | **Projects** | List all projects in the organisation |
+| **Test Plans** | List, create, and get test plans; manage suites; add and list test cases |
 
 ---
 
@@ -44,7 +45,19 @@ What you can do:
 
 ## Installing ado-mcp
 
-You will receive a ZIP file called `ado-mcp-windows-x.x.x.zip`.
+### Easiest: the MCPB bundle (Claude Desktop, all platforms)
+
+If you use **Claude Desktop**, you do not need Node.js or a setup script:
+
+1. Download `ado-mcp-<version>.mcpb` from the [GitHub releases page](https://github.com/Laonnda/ado-mcp/releases/latest).
+2. Double-click the file, or drag it into Claude Desktop **Settings → Extensions**.
+3. Fill in your Azure DevOps organization URL and Personal Access Token, then enable the extension.
+
+That is the whole installation. The sections below cover the alternative ZIP-based setup for Windows and the Claude Code / Claude Chat setups.
+
+### Alternative: the Windows ZIP
+
+Download `ado-mcp-windows-x.x.x.zip` from the GitHub releases page.
 
 1. **Install Node.js** if you have not already — download the LTS installer from [https://nodejs.org](https://nodejs.org) and click through with all defaults.
 
@@ -131,7 +144,7 @@ Open PowerShell and run the following commands one at a time:
 $env:ADO_ORG_URL = "https://dev.azure.com/your-org"
 $env:ADO_PAT = "your-pat-here"
 $env:ADO_DEFAULT_PROJECT = "MyProject"
-ado-mcp --sse
+ado-mcp --transport http
 ```
 
 The server starts and listens on `http://localhost:3100`. **Keep this PowerShell window open** while you use Claude Chat.
@@ -140,7 +153,7 @@ To use a different port:
 
 ```
 $env:PORT = "4000"
-ado-mcp --sse
+ado-mcp --transport http
 ```
 
 ### 2. Connect in Claude Chat
@@ -170,6 +183,8 @@ All tools follow the naming pattern `ado_<area>_<action>`. You never need to cal
 | `ado_workitems_get` | Full details of one item by ID | Work Items — Read |
 | `ado_workitems_create` | Create a new work item | Work Items — Read & Write |
 | `ado_workitems_update` | Update fields on an existing item | Work Items — Read & Write |
+| `ado_workitems_link` | Link two work items (parent/child, related, …) | Work Items — Read & Write |
+| `ado_workitems_unlink` | Remove a link between two work items | Work Items — Read & Write |
 
 ### Git & Pull Requests
 
@@ -205,6 +220,18 @@ All tools follow the naming pattern `ado_<area>_<action>`. You never need to cal
 | `ado_wiki_list_pages` | List pages in a wiki (paginated) | Wiki — Read |
 | `ado_wiki_get_page` | Read content of a single page | Wiki — Read |
 | `ado_wiki_update_page` | Create or update a wiki page | Wiki — Read & Write |
+
+### Test Plans
+
+| Tool | What it does | PAT scope needed |
+|---|---|---|
+| `ado_testplans_list` | List test plans in a project | Test Management — Read |
+| `ado_testplans_get` | Details of one test plan | Test Management — Read |
+| `ado_testplans_create` | Create a new test plan | Test Management — Read & Write |
+| `ado_testsuites_list` | List suites under a test plan | Test Management — Read |
+| `ado_testsuites_create` | Create a suite within a test plan | Test Management — Read & Write |
+| `ado_testcases_list` | List test cases in a suite | Test Management — Read |
+| `ado_testcases_add_to_suite` | Add existing test cases to a suite | Test Management — Read & Write |
 
 ---
 
@@ -332,6 +359,6 @@ Try checking that your Azure DevOps organisation URL does not have a trailing sl
 
 ### Claude Chat server does not respond
 
-- Check that the PowerShell window with `ado-mcp --sse` is still open
+- Check that the PowerShell window with `ado-mcp --transport http` is still open
 - Check that nothing else is using port 3100: open PowerShell and run `netstat -ano | findstr :3100`
 - Make sure the URL in Claude Chat is `http://localhost:3100/mcp` (with `/mcp` at the end)

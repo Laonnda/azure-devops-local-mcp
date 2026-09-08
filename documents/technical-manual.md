@@ -72,7 +72,7 @@ ado-mcp/
 │   ├── auth/
 │   │   ├── types.ts          # AuthProvider interface
 │   │   ├── pat.ts            # Personal Access Token provider
-│   │   ├── oauth.ts          # OAuth 2.0 client-credentials provider
+│   │   ├── oauth.ts          # OAuth 2.0 authorization-code provider
 │   │   ├── managed-identity.ts  # Azure Managed Identity (IMDS) provider
 │   │   └── select.ts         # Reads env vars, constructs the right provider
 │   ├── clients/
@@ -81,6 +81,7 @@ ado-mcp/
 │   │   ├── pipelines-client.ts
 │   │   ├── projects-client.ts
 │   │   ├── search-client.ts  # Overrides orgUrl for almsearch host
+│   │   ├── test-plans-client.ts
 │   │   ├── wiki-client.ts
 │   │   └── work-items-client.ts
 │   ├── tools/
@@ -88,29 +89,41 @@ ado-mcp/
 │   │   ├── pipelines.ts
 │   │   ├── projects.ts
 │   │   ├── search.ts
+│   │   ├── test-plans.ts
 │   │   ├── wiki.ts
 │   │   └── work-items.ts
 │   ├── validation/
 │   │   ├── common.ts         # Shared Zod schemas (guidSchema, topSchema, …)
-│   │   └── pipelines.ts      # Pipeline-specific schemas
+│   │   ├── pipelines.ts      # Pipeline-specific schemas
+│   │   └── test-plans.ts     # Test-plan-specific schemas
 │   └── utils/
 │       ├── errors.ts         # Typed error classes + withErrorHandling wrapper
 │       ├── logger.ts         # Structured JSON logger
 │       ├── rate-limiter.ts   # Token-bucket rate limiter
-│       └── sanitize.ts       # Strips credentials from response objects
+│       ├── sanitize.ts       # Strips credentials from response objects
+│       ├── truncate.ts       # Caps oversized payloads before returning them
+│       └── version.ts        # Exposes the package.json version
 ├── tests/
 │   ├── unit/
+│   │   ├── auth/             # Auth provider selection and token handling
 │   │   ├── clients/          # Client-level HTTP layer tests
-│   │   └── tools/            # Tool registration, input validation, response shape
+│   │   ├── tools/            # Tool registration, input validation, response shape
+│   │   └── utils/            # Sanitizer, rate limiter, error helpers
 │   └── integration/          # Against a live ADO org (requires ADO_PAT env var)
 ├── documents/
 │   ├── user-manual.md
 │   └── technical-manual.md   # ← this file
+├── scripts/
+│   ├── make-mcpb.sh          # Builds the .mcpb bundle for Claude Desktop
+│   └── make-release.sh       # Builds the Windows distribution ZIP
+├── .github/workflows/ci.yml  # Lint, build, tests, npm audit
 ├── dist/                     # TypeScript output (generated, not committed)
+├── manifest.json             # MCPB bundle manifest
+├── setup.ps1 / setup.bat     # Windows setup scripts (shipped in the ZIP)
 ├── package.json
 ├── tsconfig.json
 ├── vitest.config.ts
-└── CLAUDE.md                 # Development guidelines for AI-assisted work
+└── LICENSE
 ```
 
 ---
@@ -167,9 +180,9 @@ export interface AuthProvider {
 Authorization: Basic base64(":" + pat)
 ```
 
-### OAuth 2.0 (client credentials)
+### OAuth 2.0 (authorization code)
 
-`OAuthAuthProvider` exchanges `ADO_CLIENT_ID` + `ADO_CLIENT_SECRET` + `ADO_TENANT_ID` for a bearer token via the Azure AD token endpoint. Tokens are cached in memory and refreshed automatically before expiry.
+`OAuthAuthProvider` uses the authorization-code grant: it exchanges `ADO_AUTH_CODE` (obtained from the user's browser sign-in via the Azure AD authorize endpoint) together with `ADO_CLIENT_ID` + `ADO_CLIENT_SECRET` + `ADO_TENANT_ID` for a bearer token. `ADO_OAUTH_REDIRECT_URI` overrides the default redirect URI. Tokens are cached in memory and refreshed automatically before expiry.
 
 ### Managed Identity
 
@@ -279,6 +292,11 @@ npm run test:int
 ---
 
 ## Distribution — npm Package
+
+> **Status:** the package is **not yet published to npm** — publishing is on the
+> roadmap (see README). This section describes the process for when it happens.
+> Today, users install via the `.mcpb` bundle (Claude Desktop), the Windows ZIP,
+> or from source.
 
 ### Prepare for publishing
 
@@ -554,7 +572,7 @@ The HTTP server exposes a health endpoint:
 
 ```
 GET /health
-→ { "status": "ok", "server": "ado-mcp", "version": "0.1.0" }
+→ { "status": "ok", "server": "ado-mcp", "version": "0.2.0" }
 ```
 
 Configure Container Apps (or any load balancer) to probe this path.
@@ -563,84 +581,12 @@ Configure Container Apps (or any load balancer) to probe this path.
 
 ## CI/CD Pipeline
 
-Example GitHub Actions workflow (`.github/workflows/ci.yml`):
+The actual workflow (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request:
 
-```yaml
-name: CI
+- **`ci` job** — matrix on Node 20 and 22: `npm ci`, lint, full test suite, build, and `npm audit --audit-level=high`.
+- **`integration` job** — runs `npm run test:int` against a live Azure DevOps organisation, gated behind the repository variable `RUN_INTEGRATION=true` and the secrets `ADO_ORG_URL`, `ADO_PAT`, `ADO_TEST_PROJECT`.
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build
-      - run: npm run test:unit
-
-  publish:
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org
-      - run: npm ci
-      - run: npm run build
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-
-For Docker publishing, add a step after `npm run build`:
-
-```yaml
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
-          docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
-```
-
----
-
-## Configuration Reference
-
-All configuration is via environment variables. None have defaults that connect to external systems — the server will not start without at minimum `ADO_ORG_URL` and one auth method.
-
-| Variable | Required | Description |
-|---|---|---|
-| `ADO_ORG_URL` | **Yes** | Azure DevOps organisation URL, e.g. `https://dev.azure.com/contoso` |
-| `ADO_PAT` | One of three | Personal Access Token |
-| `ADO_CLIENT_ID` | One of three | OAuth 2.0 application (client) ID |
-| `ADO_CLIENT_SECRET` | With CLIENT_ID | OAuth 2.0 client secret |
-| `ADO_TENANT_ID` | With CLIENT_ID | Azure AD tenant ID |
-| `ADO_USE_MANAGED_IDENTITY` | One of three | Set to `true` to use Azure Managed Identity |
-| `ADO_MI_CLIENT_ID` | No | Client ID of a user-assigned managed identity |
-| `ADO_DEFAULT_PROJECT` | No | Project name used when a tool doesn't receive an explicit `project` input |
-| `ADO_LOG_LEVEL` | No | `debug` / `info` / `warn` / `error` (default: `info`) |
-| `PORT` | No | HTTP port for SSE transport (default: `3100`) |
-
-### Transport flags (CLI)
-
-| Flag | Description |
-|---|---|
-| *(none)* | Stdio transport — default for Claude Code |
-| `--transport http` | HTTP/SSE transport — for Claude Chat and web clients |
+There is **no automated publish step** — releases are built locally (`scripts/make-mcpb.sh`, `scripts/make-release.sh`) and attached to a GitHub release by hand. If npm publishing is adopted later (see the Distribution section), a tag-triggered `publish` job with `npm publish` and an `NPM_TOKEN` secret is the natural extension.
 
 ---
 
@@ -659,7 +605,7 @@ To cut a release:
 1. Update `version` in `package.json`
 2. Commit: `chore: bump version to 0.2.0`
 3. Tag: `git tag v0.2.0 && git push --tags`
-4. CI publishes automatically on tag push (see CI/CD section above)
+4. Build the release artifacts (`scripts/make-mcpb.sh`, `scripts/make-release.sh`) and attach them to a GitHub release for the tag
 
 ---
 
