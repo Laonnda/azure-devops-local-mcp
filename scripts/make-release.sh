@@ -19,7 +19,26 @@ cp -r dist "$DEST/"
 cp package.json "$DEST/"
 cp setup.bat "$DEST/"
 cp setup.ps1 "$DEST/"
-cp distribution/INSTALL.txt "$DEST/"
+
+cat > "$DEST/INSTALL.txt" <<'EOF'
+ado-mcp — Windows installation
+==============================
+
+1. Install Node.js 20 or later (LTS installer from https://nodejs.org).
+2. Extract this ZIP to a permanent folder, e.g. C:\tools\ado-mcp.
+   Do not move the folder afterwards.
+3. Right-click setup.ps1 and choose "Run with PowerShell".
+4. Follow the prompts: Azure DevOps organization URL, Personal Access
+   Token, and optionally a default project.
+5. Restart Claude Desktop.
+
+The setup script writes the Claude Desktop configuration automatically.
+Run it again if you need to change the URL or renew the token.
+
+Tip: Claude Desktop users can skip this ZIP entirely — download the
+.mcpb bundle from the GitHub releases page and open it with Claude
+Desktop instead. No Node.js required.
+EOF
 
 echo "Installing production dependencies..."
 cd "$DEST"
