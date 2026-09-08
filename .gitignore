@@ -11,3 +11,9 @@ coverage/
 
 # Word/Office låsefiler
 ~$*
+*.mcpb
+CLAUDE.md
+WORKITEMS_TOOLS_TEST_PLAN.md
+distribution/
+*.docx
+.claude/
