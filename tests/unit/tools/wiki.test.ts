@@ -77,7 +77,7 @@ describe("wikiPathSchema validation", () => {
     expect(() => wikiPathSchema.parse(longPath)).toThrow();
   });
 
-  it("accepts path with + character (Team+Docs pages)", () => {
+  it("accepts path with + character", () => {
     expect(() => wikiPathSchema.parse("/Team+Docs/Architecture")).not.toThrow();
   });
 
