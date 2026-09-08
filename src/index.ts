@@ -11,6 +11,8 @@ import type { AdoConfig } from "./auth/types.js";
 import { createServer } from "./server.js";
 import { logger } from "./utils/logger.js";
 import { RateLimiter } from "./utils/rate-limiter.js";
+import { sanitizeString } from "./utils/sanitize.js";
+import { VERSION } from "./utils/version.js";
 
 const API_VERSION_PATTERN = /^\d+\.\d+(-preview(\.\d+)?)?$/;
 
@@ -75,17 +77,28 @@ async function main(): Promise<void> {
     app.use(express.json());
 
     app.get("/health", (_req, res) => {
-      res.json({ status: "ok", server: "ado-mcp", version: "0.1.0" });
+      res.json({ status: "ok", server: "ado-mcp", version: VERSION });
     });
 
+    // Reject browser-originated cross-site requests (DNS-rebinding protection).
+    // Non-browser MCP clients do not send an Origin header and pass through.
+    const LOOPBACK_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
     app.post("/mcp", async (req, res) => {
+      const origin = req.headers.origin;
+      if (origin && !LOOPBACK_ORIGIN.test(origin)) {
+        res.status(403).json({ error: "Forbidden origin" });
+        return;
+      }
+      // Stateless mode: a fresh server + transport per request, per SDK guidance
+      const requestServer = createServer(config);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless
       });
       res.on("close", () => {
         transport.close().catch(() => {});
+        requestServer.close().catch(() => {});
       });
-      await server.connect(transport);
+      await requestServer.connect(transport);
       await transport.handleRequest(req, res, req.body);
     });
 
@@ -94,8 +107,10 @@ async function main(): Promise<void> {
       logger.error("PORT must be a number between 1 and 65535");
       process.exit(1);
     }
-    const httpServer = app.listen(port, () => {
-      logger.info(`ado-mcp HTTP server listening on port ${port}`);
+    // Loopback only by default; set ADO_HTTP_HOST to widen deliberately.
+    const host = process.env.ADO_HTTP_HOST || "127.0.0.1";
+    const httpServer = app.listen(port, host, () => {
+      logger.info(`ado-mcp HTTP server listening on ${host}:${port}`);
     });
 
     const shutdown = async () => {
@@ -128,6 +143,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  logger.error("Fatal error", { error: String(err) });
+  logger.error("Fatal error", { error: sanitizeString(String(err)) });
   process.exit(1);
 });

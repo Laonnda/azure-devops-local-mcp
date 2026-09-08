@@ -4,6 +4,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AdoConfig } from "./auth/types.js";
+import { VERSION } from "./utils/version.js";
 import { registerProjectsTools } from "./tools/projects.js";
 import { registerWorkItemsTools } from "./tools/work-items.js";
 import { registerGitTools } from "./tools/git.js";
@@ -16,7 +17,7 @@ export function createServer(config: AdoConfig): McpServer {
   const server = new McpServer(
     {
       name: "ado-mcp",
-      version: "0.1.0",
+      version: VERSION,
     },
     {
       instructions:
