@@ -25,8 +25,8 @@ server, it is a great choice. This project exists for a different scenario:
 - **Simple auth.** One PAT in an environment variable or the Claude Desktop
   config. No Azure CLI, no interactive browser sign-in required.
 - **Small supply chain.** Three runtime dependencies (`@modelcontextprotocol/sdk`,
-  `express`, `zod`) against the official server's thirteen — easier to audit,
-  smaller attack surface.
+  `express`, `zod`) against the official server's thirteen (as of September 2026) —
+  easier to audit, smaller attack surface.
 
 If you need Advanced Security alerts, team capacity planning, or the hosted
 remote server, use the official one. If you want a lean local server for Claude,
@@ -125,9 +125,16 @@ Create a PAT in Azure DevOps (profile icon → Personal access tokens) with only
 | Variable | Required | Description |
 |---|---|---|
 | `ADO_ORG_URL` | Yes | Organisation URL, e.g. `https://dev.azure.com/myorg` |
-| `ADO_PAT` | Yes | Personal Access Token |
+| `ADO_PAT` | Yes* | Personal Access Token |
 | `ADO_DEFAULT_PROJECT` | No | Default project name |
 | `ADO_LOG_LEVEL` | No | `debug`, `info`, `warn`, `error` (default: `info`) |
+| `ADO_API_VERSION` | No | Azure DevOps REST API version, e.g. `7.2-preview` (default) or `7.1` |
+| `ADO_RATE_LIMIT` | No | Max concurrent API requests (default: `60`) |
+| `PORT` | No | HTTP mode only: listen port (default: `3100`) |
+| `ADO_HTTP_HOST` | No | HTTP mode only: bind address (default: `127.0.0.1`, loopback only) |
+
+\* PAT is the simplest method. OAuth 2.0 and Azure Managed Identity are also
+supported — see [`.env.example`](.env.example) for the alternative variables.
 
 ## Roadmap
 

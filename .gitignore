@@ -9,11 +9,11 @@ dist/
 coverage/
 .nyc_output/
 
-# Word/Office låsefiler
+# Word/Office lock files
 ~$*
 *.mcpb
 CLAUDE.md
-WORKITEMS_TOOLS_TEST_PLAN.md
+*_TEST_PLAN.md
 distribution/
 *.docx
 .claude/
