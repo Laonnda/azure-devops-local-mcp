@@ -624,13 +624,13 @@ All tool inputs pass through Zod schemas before reaching the HTTP layer. The sch
 - Maximum string lengths on all text fields
 - Regex patterns on structured identifiers (GUIDs, project names, wiki paths)
 - Enum constraints on fields that accept only known values
-- WIQL query validation: blocked SQL-mutation patterns and a 2000-character limit
+- WIQL query validation: queries must be a single SELECT … FROM WorkItems statement (2000-character limit); project scoping is injected server-side and queries referencing [System.TeamProject] under a project scope are rejected
 
 ### Network
 
-- All ADO API calls use HTTPS; there is no option to downgrade to HTTP
+- `ADO_ORG_URL` is validated at startup: https:// is required (http:// is accepted for localhost only)
 - The server sets a 30-second timeout on every request
-- A token-bucket rate limiter (`src/utils/rate-limiter.ts`) limits to 60 calls/minute by default, with exponential back-off on 429 responses
+- A token-bucket rate limiter (`src/utils/rate-limiter.ts`) limits to 60 calls/minute by default; 429 responses honour Retry-After (capped at 60 s) with linear back-off as fallback
 
 ### Least privilege
 

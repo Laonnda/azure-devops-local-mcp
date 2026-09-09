@@ -126,7 +126,11 @@ export class BaseClient {
 
         if (response.status === 429) {
           const retryAfter = response.headers.get("Retry-After");
-          const retryMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 5000 * (attempt + 1);
+          const parsedSec = retryAfter ? parseInt(retryAfter, 10) : NaN;
+          // Cap at 60s; fall back to linear backoff on missing/HTTP-date Retry-After
+          const retryMs = Number.isFinite(parsedSec)
+            ? Math.min(Math.max(parsedSec, 1), 60) * 1000
+            : 5000 * (attempt + 1);
           logger.warn(`Rate limited, retrying after ${retryMs}ms`, { attempt });
           await this.rateLimiter.backoff(retryMs);
           lastError = new RateLimitError(retryMs);

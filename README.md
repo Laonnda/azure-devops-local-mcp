@@ -15,7 +15,7 @@ server, and if you use VS Code with GitHub Copilot against their hosted remote
 server, it is a great choice. This project exists for a different scenario:
 
 - **Claude-first.** One-file MCPB install for Claude Desktop (no Node.js required),
-  SSE mode for Claude Chat, and setup scripts and manuals written for Claude Code.
+  a hardened local HTTP mode, and setup scripts and manuals written for Claude Code.
   The official server is built VS Code-first and ships via npm only.
 - **Local-first, by design.** Microsoft is moving development to their hosted
   remote server and recommends local users plan a migration. This server is and
@@ -96,15 +96,21 @@ Run `/mcp` inside Claude Code to confirm the connection.
 
 On Windows, `setup.bat` / `setup.ps1` automate the Claude Desktop JSON-config route if you prefer a scripted install over the MCPB bundle.
 
-## Claude Chat (Web) — SSE mode
+## HTTP mode (advanced)
 
-Start the server locally in HTTP mode and connect Claude Chat to it:
+The server can also run as a local HTTP endpoint for MCP clients that connect over HTTP:
 
 ```
 azure-devops-local-mcp --transport http
 ```
 
-Then add `http://localhost:3100/mcp` as an MCP server in Claude Chat settings.
+It binds to `127.0.0.1:3100` and serves MCP at `http://127.0.0.1:3100/mcp`. Note that
+the hosted claude.ai cannot reach a localhost URL: to use this server with Claude
+Chat on the web you would need to expose it through your own tunnel or reverse
+proxy. If you do, set `ADO_HTTP_TOKEN` — the server refuses to bind beyond
+loopback without it, and with it every `/mcp` request must carry
+`Authorization: Bearer <token>`. Treat that setup as advanced: the token guards
+a PAT with real permissions.
 
 ## Personal Access Token
 
@@ -133,12 +139,32 @@ Create a PAT in Azure DevOps (profile icon → Personal access tokens) with only
 | `ADO_DEFAULT_PROJECT` | No | Default project name |
 | `ADO_LOG_LEVEL` | No | `debug`, `info`, `warn`, `error` (default: `info`) |
 | `ADO_API_VERSION` | No | Azure DevOps REST API version, e.g. `7.2-preview` (default) or `7.1` |
-| `ADO_RATE_LIMIT` | No | Max concurrent API requests (default: `60`) |
+| `ADO_RATE_LIMIT` | No | Max API requests per minute (default: `60`) |
+| `ADO_READ_ONLY` | No | `true` registers only read tools — no writes possible |
 | `PORT` | No | HTTP mode only: listen port (default: `3100`) |
-| `ADO_HTTP_HOST` | No | HTTP mode only: bind address (default: `127.0.0.1`, loopback only) |
+| `ADO_HTTP_HOST` | No | HTTP mode only: bind address (default: `127.0.0.1`; non-loopback requires `ADO_HTTP_TOKEN`) |
+| `ADO_HTTP_TOKEN` | No | HTTP mode only: require `Authorization: Bearer <token>` on `/mcp` |
 
 \* PAT is the simplest method. OAuth 2.0 and Azure Managed Identity are also
 supported — see [`.env.example`](.env.example) for the alternative variables.
+
+## Security model
+
+- **Your PAT stays local.** The server is a local process; credentials live in
+  environment variables or the Claude Desktop extension config and are never
+  logged. API responses are scrubbed for credential-shaped fields before they
+  reach the model.
+- **Treat Azure DevOps content as untrusted input.** Work item text, PR
+  comments, and wiki pages written by others are returned to the model verbatim
+  and can contain adversarial instructions ("prompt injection"). If your PAT
+  has write scopes, a hostile work item can try to steer the model into using
+  them. Give the PAT the narrowest scopes you can, and prefer read-only tokens
+  for browsing workflows.
+- **Read-only mode.** Set `ADO_READ_ONLY=true` and the server only registers
+  read tools — no writes are possible regardless of what the model is asked
+  to do. Recommended wherever you don't actively need writes.
+- **HTTP mode is loopback-only by default** and requires `ADO_HTTP_TOKEN` to
+  bind wider. See [HTTP mode](#http-mode-advanced).
 
 ## Roadmap
 

@@ -5,6 +5,7 @@
  * Supports stdio (default) and HTTP transports.
  */
 
+import { timingSafeEqual } from "node:crypto";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { selectAuthProvider } from "./auth/select.js";
 import type { AdoConfig } from "./auth/types.js";
@@ -20,6 +21,10 @@ function loadConfig(): AdoConfig {
   const orgUrl = process.env.ADO_ORG_URL;
   if (!orgUrl) {
     logger.error("ADO_ORG_URL environment variable is required");
+    process.exit(1);
+  }
+  if (!/^https:\/\//i.test(orgUrl) && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(orgUrl)) {
+    logger.error("ADO_ORG_URL must use https:// (http:// is allowed for localhost only)");
     process.exit(1);
   }
 
@@ -42,12 +47,18 @@ function loadConfig(): AdoConfig {
   const rateLimit = parseInt(process.env.ADO_RATE_LIMIT ?? "60", 10);
   const rateLimiter = new RateLimiter(isNaN(rateLimit) || rateLimit < 1 ? 60 : rateLimit);
 
+  const readOnly = process.env.ADO_READ_ONLY === "true";
+  if (readOnly) {
+    logger.info("Read-only mode: write tools are not registered");
+  }
+
   return {
     orgUrl,
     defaultProject: process.env.ADO_DEFAULT_PROJECT,
     auth,
     rateLimiter,
     apiVersion,
+    readOnly,
   };
 }
 
@@ -74,7 +85,20 @@ async function main(): Promise<void> {
       await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
 
     const app = express();
-    app.use(express.json());
+    app.use(express.json({ limit: "2mb" }));
+
+    const httpToken = process.env.ADO_HTTP_TOKEN;
+    // Loopback only by default; a wider bind requires a bearer token so the
+    // endpoint never fronts the PAT unauthenticated beyond localhost.
+    const host = process.env.ADO_HTTP_HOST || "127.0.0.1";
+    const isLoopback = ["127.0.0.1", "localhost", "::1"].includes(host);
+    if (!isLoopback && !httpToken) {
+      logger.error(
+        "ADO_HTTP_HOST is set to a non-loopback address. Set ADO_HTTP_TOKEN to require " +
+          "Authorization: Bearer <token> on /mcp before exposing the server beyond localhost.",
+      );
+      process.exit(1);
+    }
 
     app.get("/health", (_req, res) => {
       res.json({ status: "ok", server: "azure-devops-local-mcp", version: VERSION });
@@ -88,6 +112,14 @@ async function main(): Promise<void> {
       if (origin && !LOOPBACK_ORIGIN.test(origin)) {
         res.status(403).json({ error: "Forbidden origin" });
         return;
+      }
+      if (httpToken) {
+        const expected = Buffer.from(`Bearer ${httpToken}`);
+        const provided = Buffer.from(req.headers.authorization ?? "");
+        if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+          res.status(401).json({ error: "Unauthorized" });
+          return;
+        }
       }
       // Stateless mode: a fresh server + transport per request, per SDK guidance
       const requestServer = createServer(config);
@@ -107,8 +139,6 @@ async function main(): Promise<void> {
       logger.error("PORT must be a number between 1 and 65535");
       process.exit(1);
     }
-    // Loopback only by default; set ADO_HTTP_HOST to widen deliberately.
-    const host = process.env.ADO_HTTP_HOST || "127.0.0.1";
     const httpServer = app.listen(port, host, () => {
       logger.info(`azure-devops-local-mcp HTTP server listening on ${host}:${port}`);
     });

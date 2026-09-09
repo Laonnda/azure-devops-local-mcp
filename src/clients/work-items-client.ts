@@ -108,7 +108,9 @@ function validateWiql(query: string): void {
 
 /**
  * Inject [System.TeamProject] = 'project' into a WIQL WHERE clause.
- * No-ops when the query already references [System.TeamProject].
+ * Rejects queries that reference [System.TeamProject] themselves — a
+ * caller-supplied TeamProject condition (even inside a string literal)
+ * would otherwise disable the scoping this function exists to guarantee.
  * Handles WHERE, ORDER BY, ASOF, and bare SELECT forms.
  *
  * Existing WHERE conditions are wrapped in parentheses: AND binds tighter
@@ -117,7 +119,10 @@ function validateWiql(query: string): void {
  */
 export function injectProjectFilter(wiql: string, project: string): string {
   if (/\[System\.TeamProject\]/i.test(wiql)) {
-    return wiql;
+    throw new ValidationError(
+      "The query must not reference [System.TeamProject] when a project scope is applied. " +
+        "Omit the project parameter to query across projects, or remove the TeamProject condition.",
+    );
   }
 
   const escapedProject = project.replace(/'/g, "''");

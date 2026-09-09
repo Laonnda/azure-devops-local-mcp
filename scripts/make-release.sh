@@ -17,6 +17,7 @@ npm run build
 echo "Copying files..."
 cp -r dist "$DEST/"
 cp package.json "$DEST/"
+cp package-lock.json "$DEST/"
 cp setup.bat "$DEST/"
 cp setup.ps1 "$DEST/"
 
@@ -40,10 +41,9 @@ Tip: Claude Desktop users can skip this ZIP entirely — download the
 Desktop instead. No Node.js required.
 EOF
 
-echo "Installing production dependencies..."
+echo "Installing production dependencies (pinned by lockfile)..."
 cd "$DEST"
-npm install --omit=dev --ignore-scripts 2>/dev/null
-rm -f package-lock.json
+npm ci --omit=dev --ignore-scripts 2>/dev/null
 cd - > /dev/null
 
 echo "Zipping..."

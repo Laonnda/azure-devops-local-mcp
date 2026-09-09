@@ -28,6 +28,25 @@ export function createServer(config: AdoConfig): McpServer {
     },
   );
 
+  if (config.readOnly) {
+    // Read-only mode: skip registering any tool not annotated readOnlyHint: true.
+    const original = server.registerTool.bind(server) as (
+      name: string,
+      definition: { annotations?: { readOnlyHint?: boolean } },
+      handler: unknown,
+    ) => unknown;
+    (server as { registerTool: unknown }).registerTool = (
+      name: string,
+      definition: { annotations?: { readOnlyHint?: boolean } },
+      handler: unknown,
+    ): unknown => {
+      if (definition.annotations?.readOnlyHint === true) {
+        return original(name, definition, handler);
+      }
+      return undefined;
+    };
+  }
+
   registerProjectsTools(server, config);
   registerWorkItemsTools(server, config);
   registerGitTools(server, config);

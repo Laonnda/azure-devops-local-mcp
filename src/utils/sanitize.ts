@@ -4,10 +4,10 @@
  */
 
 const PATTERNS: RegExp[] = [
-  // Base64-encoded PAT (Basic auth header value)
-  /Basic\s+[A-Za-z0-9+/=]{20,}/g,
-  // Bearer tokens
-  /Bearer\s+[A-Za-z0-9._~+/=-]{20,}/g,
+  // Base64-encoded PAT (Basic auth header value); schemes are case-insensitive
+  /Basic\s+[A-Za-z0-9+/=]{20,}/gi,
+  // Bearer tokens; schemes are case-insensitive
+  /Bearer\s+[A-Za-z0-9._~+/=-]{20,}/gi,
   // Connection strings with passwords
   /Password=[^;]+/gi,
   // Azure DevOps PAT patterns in URLs
@@ -52,6 +52,9 @@ export function sanitizeObject<T>(obj: T): T {
         lowerKey.includes("password") ||
         lowerKey.includes("secret") ||
         lowerKey.includes("authorization") ||
+        lowerKey.includes("credential") ||
+        lowerKey.includes("apikey") ||
+        lowerKey.includes("connectionstring") ||
         lowerKey === "pat"
       ) {
         sanitized[key] = REDACTED;

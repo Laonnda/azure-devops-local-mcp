@@ -14,4 +14,6 @@ export interface AdoConfig {
   auth: AuthProvider;
   rateLimiter: RateLimiter;
   apiVersion?: string;
+  /** When true, only tools annotated readOnlyHint: true are registered. */
+  readOnly?: boolean;
 }

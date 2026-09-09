@@ -135,18 +135,21 @@ describe("case 4: query with project 'DEMO PROJECT' — injects correct project 
   });
 });
 
-describe("case 5: query with WIQL that already has [System.TeamProject] — no double injection", () => {
-  it("[System.TeamProject] appears exactly once in the sent WIQL", async () => {
-    mockSequence(wiqlResponse([1]), batchResponse([1], "EMS"));
+describe("case 5: query with WIQL that already has [System.TeamProject] — rejected under project scope", () => {
+  it("throws ValidationError instead of trusting the caller's TeamProject condition", async () => {
     const client = new WorkItemsClient(createConfig());
     const wiql =
       "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = 'EMS' AND [System.WorkItemType] = 'Bug'";
-    await client.query(wiql, { project: "EMS" });
+    await expect(client.query(wiql, { project: "EMS" })).rejects.toThrow(
+      /must not reference \[System\.TeamProject\]/,
+    );
+  });
 
-    const body = calledBody(0);
-    const sentWiql = body.query as string;
-    const occurrences = (sentWiql.match(/\[System\.TeamProject\]/gi) ?? []).length;
-    expect(occurrences).toBe(1);
+  it("rejects a scoping bypass hidden in a condition value", () => {
+    const wiql = "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] <> ''";
+    expect(() => injectProjectFilter(wiql, "EMS")).toThrow(
+      /must not reference \[System\.TeamProject\]/,
+    );
   });
 });
 

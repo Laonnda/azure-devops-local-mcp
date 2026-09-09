@@ -27,11 +27,11 @@ echo "Installing production dependencies..."
 (cd "$DEST" && npm ci --omit=dev --ignore-scripts 2>/dev/null)
 
 echo "Validating manifest..."
-npx -y @anthropic-ai/mcpb validate "$DEST/manifest.json"
+npx -y @anthropic-ai/mcpb@2.1.2 validate "$DEST/manifest.json"
 
 echo "Packing..."
 rm -f "$OUT"
-npx -y @anthropic-ai/mcpb pack "$DEST" "$OUT"
+npx -y @anthropic-ai/mcpb@2.1.2 pack "$DEST" "$OUT"
 
 rm -rf "$STAGING"
 echo ""
