@@ -1,8 +1,8 @@
-# ado-mcp — Azure DevOps for Claude
+# azure-devops-local-mcp — Azure DevOps for Claude
 
-[![CI](https://github.com/Laonnda/ado-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Laonnda/ado-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/Laonnda/azure-devops-local-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Laonnda/azure-devops-local-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Download for Claude Desktop](https://img.shields.io/badge/Claude%20Desktop-.mcpb%20install-orange)](https://github.com/Laonnda/ado-mcp/releases/latest)
+[![Download for Claude Desktop](https://img.shields.io/badge/Claude%20Desktop-.mcpb%20install-orange)](https://github.com/Laonnda/azure-devops-local-mcp/releases/latest)
 
 A local MCP (Model Context Protocol) server that connects **Claude Desktop, Claude Code, and Claude Chat** to your Azure DevOps organisation — query work items, review pull requests, trigger pipelines, search code, manage test plans, and update wikis using plain language.
 
@@ -28,6 +28,10 @@ server, it is a great choice. This project exists for a different scenario:
   `express`, `zod`) against the official server's thirteen (as of September 2026) —
   easier to audit, smaller attack surface.
 
+> This project is not affiliated with or endorsed by Microsoft. "Azure DevOps"
+> is a Microsoft trademark; the name is used descriptively. For the official
+> server, see [microsoft/azure-devops-mcp](https://github.com/microsoft/azure-devops-mcp).
+
 If you need Advanced Security alerts, team capacity planning, or the hosted
 remote server, use the official one. If you want a lean local server for Claude,
 you are in the right place.
@@ -48,7 +52,7 @@ you are in the right place.
 
 The prebuilt MCP Bundle (`.mcpb`) is the easiest way in. One file covers macOS, Windows, and Linux, and no Node.js installation is required — Claude Desktop runs the server with its bundled runtime.
 
-1. Download `ado-mcp-<version>.mcpb` from the [latest release](https://github.com/Laonnda/ado-mcp/releases/latest).
+1. Download `azure-devops-local-mcp-<version>.mcpb` from the [latest release](https://github.com/Laonnda/azure-devops-local-mcp/releases/latest).
 2. Open the file with Claude Desktop — double-click it, or drag it into **Settings → Extensions**.
 3. Fill in the configuration fields:
    - **Azure DevOps organization URL** (required), e.g. `https://dev.azure.com/yourorg`
@@ -57,15 +61,15 @@ The prebuilt MCP Bundle (`.mcpb`) is the easiest way in. One file covers macOS, 
    - **Log level** (optional, default `info`)
 4. Enable the extension. No restart or manual config file editing is needed.
 
-To build the bundle from source, run `bash scripts/make-mcpb.sh` — it outputs `distribution/ado-mcp-<version>.mcpb`.
+To build the bundle from source, run `bash scripts/make-mcpb.sh` — it outputs `distribution/azure-devops-local-mcp-<version>.mcpb`.
 
 ## Install — Claude Code (from source)
 
 The package is not yet published to npm (see [Roadmap](#roadmap)). Clone and build:
 
 ```
-git clone https://github.com/Laonnda/ado-mcp.git
-cd ado-mcp
+git clone https://github.com/Laonnda/azure-devops-local-mcp.git
+cd azure-devops-local-mcp
 npm install
 npm run build
 npm install -g .
@@ -77,7 +81,7 @@ Then create a `.mcp.json` file in your project folder (or a parent folder to sha
 {
   "mcpServers": {
     "ado": {
-      "command": "ado-mcp",
+      "command": "azure-devops-local-mcp",
       "env": {
         "ADO_ORG_URL": "https://dev.azure.com/your-org",
         "ADO_PAT": "your-pat-here",
@@ -97,7 +101,7 @@ On Windows, `setup.bat` / `setup.ps1` automate the Claude Desktop JSON-config ro
 Start the server locally in HTTP mode and connect Claude Chat to it:
 
 ```
-ado-mcp --transport http
+azure-devops-local-mcp --transport http
 ```
 
 Then add `http://localhost:3100/mcp` as an MCP server in Claude Chat settings.
@@ -140,7 +144,7 @@ supported — see [`.env.example`](.env.example) for the alternative variables.
 
 | Feature | Status |
 |---|---|
-| Publish to npm (`npx -y ado-mcp` one-line setup) | Planned |
+| Publish to npm (`npx -y azure-devops-local-mcp` one-line setup) | Planned |
 | Submit to the MCP registry and the Claude Desktop extensions directory | Planned |
 | PR reviewer votes (approve / wait for author / reject) | Under consideration |
 

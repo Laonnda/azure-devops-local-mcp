@@ -77,7 +77,7 @@ async function main(): Promise<void> {
     app.use(express.json());
 
     app.get("/health", (_req, res) => {
-      res.json({ status: "ok", server: "ado-mcp", version: VERSION });
+      res.json({ status: "ok", server: "azure-devops-local-mcp", version: VERSION });
     });
 
     // Reject browser-originated cross-site requests (DNS-rebinding protection).
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
     // Loopback only by default; set ADO_HTTP_HOST to widen deliberately.
     const host = process.env.ADO_HTTP_HOST || "127.0.0.1";
     const httpServer = app.listen(port, host, () => {
-      logger.info(`ado-mcp HTTP server listening on ${host}:${port}`);
+      logger.info(`azure-devops-local-mcp HTTP server listening on ${host}:${port}`);
     });
 
     const shutdown = async () => {
@@ -127,7 +127,7 @@ async function main(): Promise<void> {
     // Default: stdio transport for Claude Code
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    logger.info("ado-mcp started on stdio transport");
+    logger.info("azure-devops-local-mcp started on stdio transport");
 
     const shutdown = async () => {
       logger.info("Shutting down gracefully...");

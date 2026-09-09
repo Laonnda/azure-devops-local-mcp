@@ -20,7 +20,7 @@ describe.skipIf(!HAS_PAT)("WorkItemsClient — integration", () => {
   it("creates a work item and reads it back", async () => {
     const client = new WorkItemsClient(createIntegrationConfig());
     const item = await client.create(project, "Task", {
-      "System.Title": "[ado-mcp integration test] temporary item — safe to delete",
+      "System.Title": "[azure-devops-local-mcp integration test] temporary item — safe to delete",
     });
     expect(item.id).toBeGreaterThan(0);
     expect(item.title).toContain("integration test");

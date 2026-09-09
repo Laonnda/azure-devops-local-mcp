@@ -1,5 +1,5 @@
-# ado-mcp Setup Script
-# Run this once to connect ado-mcp to Claude Desktop.
+# azure-devops-local-mcp Setup Script
+# Run this once to connect azure-devops-local-mcp to Claude Desktop.
 # Right-click this file and choose "Run with PowerShell",
 # OR double-click setup.bat if you see a script-blocked error.
 
@@ -15,10 +15,10 @@ trap {
 }
 
 Write-Host ""
-Write-Host "  ado-mcp Setup" -ForegroundColor Cyan
+Write-Host "  azure-devops-local-mcp Setup" -ForegroundColor Cyan
 Write-Host "  ==============" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  This will connect ado-mcp to Claude Desktop."
+Write-Host "  This will connect azure-devops-local-mcp to Claude Desktop."
 Write-Host "  You will need a Personal Access Token from Azure DevOps."
 Write-Host ""
 
@@ -48,11 +48,11 @@ if (-not $nodePath) {
     exit 1
 }
 
-# Verify ado-mcp files are present
+# Verify azure-devops-local-mcp files are present
 if (-not (Test-Path $serverPath)) {
     Write-Host ""
     Write-Host "  ERROR: Could not find $serverPath" -ForegroundColor Red
-    Write-Host "  Make sure you extracted the full ado-mcp ZIP before running this script." -ForegroundColor Red
+    Write-Host "  Make sure you extracted the full azure-devops-local-mcp ZIP before running this script." -ForegroundColor Red
     Write-Host ""
     Read-Host "  Press Enter to exit"
     exit 1

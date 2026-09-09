@@ -6,9 +6,9 @@ set -e
 cd "$(dirname "$0")/.."
 
 VERSION=$(node -p "require('./package.json').version")
-OUT="distribution/ado-mcp-windows-$VERSION.zip"
+OUT="distribution/azure-devops-local-mcp-windows-$VERSION.zip"
 STAGING=$(mktemp -d)
-DEST="$STAGING/ado-mcp"
+DEST="$STAGING/azure-devops-local-mcp"
 mkdir -p "$DEST"
 
 echo "Building..."
@@ -21,11 +21,11 @@ cp setup.bat "$DEST/"
 cp setup.ps1 "$DEST/"
 
 cat > "$DEST/INSTALL.txt" <<'EOF'
-ado-mcp — Windows installation
+azure-devops-local-mcp — Windows installation
 ==============================
 
 1. Install Node.js 20 or later (LTS installer from https://nodejs.org).
-2. Extract this ZIP to a permanent folder, e.g. C:\tools\ado-mcp.
+2. Extract this ZIP to a permanent folder, e.g. C:\tools\azure-devops-local-mcp.
    Do not move the folder afterwards.
 3. Right-click setup.ps1 and choose "Run with PowerShell".
 4. Follow the prompts: Azure DevOps organization URL, Personal Access
@@ -48,7 +48,7 @@ cd - > /dev/null
 
 echo "Zipping..."
 rm -f "$OUT"
-(cd "$STAGING" && zip -r "$OLDPWD/$OUT" ado-mcp -x "*/\.DS_Store" -x "*/__pycache__/*")
+(cd "$STAGING" && zip -r "$OLDPWD/$OUT" azure-devops-local-mcp -x "*/\.DS_Store" -x "*/__pycache__/*")
 
 rm -rf "$STAGING"
 echo ""

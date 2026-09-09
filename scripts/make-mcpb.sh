@@ -7,9 +7,9 @@ set -e
 cd "$(dirname "$0")/.."
 
 VERSION=$(node -p "require('./package.json').version")
-OUT="distribution/ado-mcp-$VERSION.mcpb"
+OUT="distribution/azure-devops-local-mcp-$VERSION.mcpb"
 STAGING=$(mktemp -d)
-DEST="$STAGING/ado-mcp"
+DEST="$STAGING/azure-devops-local-mcp"
 mkdir -p "$DEST" distribution
 
 echo "Building..."

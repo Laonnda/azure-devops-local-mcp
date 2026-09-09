@@ -16,7 +16,7 @@ import { registerTestPlansTools } from "./tools/test-plans.js";
 export function createServer(config: AdoConfig): McpServer {
   const server = new McpServer(
     {
-      name: "ado-mcp",
+      name: "azure-devops-local-mcp",
       version: VERSION,
     },
     {

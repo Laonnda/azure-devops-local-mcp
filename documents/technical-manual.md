@@ -1,6 +1,6 @@
-# ADO-MCP Technical Manual
+# Azure DevOps Local MCP — Technical Manual
 
-Architecture, build pipeline, distribution, deployment, and extension guide for ado-mcp maintainers and platform teams.
+Architecture, build pipeline, distribution, deployment, and extension guide for azure-devops-local-mcp maintainers and platform teams.
 
 ---
 
@@ -33,7 +33,7 @@ Architecture, build pipeline, distribution, deployment, and extension guide for 
            │  MCP Protocol             │  MCP over HTTP
            ▼                           ▼
 ┌──────────────────────────────────────────────────────┐
-│                    ado-mcp server                    │
+│                    azure-devops-local-mcp server                    │
 │                                                      │
 │  Transport layer                                     │
 │    StdioServerTransport  │  StreamableHTTPTransport  │
@@ -65,7 +65,7 @@ The server is intentionally stateless — no database, no session storage, no ca
 ## Repository Layout
 
 ```
-ado-mcp/
+azure-devops-local-mcp/
 ├── src/
 │   ├── index.ts              # Entry point; selects transport, calls createServer()
 │   ├── server.ts             # Creates McpServer and registers all tool groups
@@ -143,7 +143,7 @@ npm run dev          # tsx watch src/index.ts (no build step, hot-reload)
 
 ### Output
 
-`npm run build` writes compiled `.js` files to `dist/` mirroring the `src/` layout. The entry point is `dist/index.js`. The `bin` field in `package.json` maps the `ado-mcp` CLI name to this file.
+`npm run build` writes compiled `.js` files to `dist/` mirroring the `src/` layout. The entry point is `dist/index.js`. The `bin` field in `package.json` maps the `azure-devops-local-mcp` CLI name to this file.
 
 ### Key npm scripts
 
@@ -332,7 +332,7 @@ npm publish --registry https://npm.pkg.github.com
 Once published, users install with:
 
 ```bash
-npm install -g ado-mcp
+npm install -g azure-devops-local-mcp
 ```
 
 And reference the binary in Claude Code settings:
@@ -341,7 +341,7 @@ And reference the binary in Claude Code settings:
 {
   "mcpServers": {
     "ado": {
-      "command": "ado-mcp",
+      "command": "azure-devops-local-mcp",
       "env": { "ADO_ORG_URL": "...", "ADO_PAT": "..." }
     }
   }
@@ -376,8 +376,8 @@ CMD ["node", "dist/index.js", "--transport", "http"]
 ### Build and push
 
 ```bash
-docker build -t your-registry/ado-mcp:0.1.0 .
-docker push your-registry/ado-mcp:0.1.0
+docker build -t your-registry/azure-devops-local-mcp:0.1.0 .
+docker push your-registry/azure-devops-local-mcp:0.1.0
 ```
 
 ### Run the container
@@ -388,7 +388,7 @@ docker run -d \
   -e ADO_ORG_URL="https://dev.azure.com/your-org" \
   -e ADO_PAT="your-pat" \
   -e ADO_DEFAULT_PROJECT="MyProject" \
-  your-registry/ado-mcp:0.1.0
+  your-registry/azure-devops-local-mcp:0.1.0
 ```
 
 ---
@@ -410,7 +410,7 @@ Create `.mcp.json` in a folder that is a parent of all your ADO-related work, fo
   "mcpServers": {
     "ado": {
       "command": "node",
-      "args": ["/opt/ado-mcp/dist/index.js"],
+      "args": ["/opt/azure-devops-local-mcp/dist/index.js"],
       "env": {
         "ADO_ORG_URL": "https://dev.azure.com/your-org",
         "ADO_PAT": "the-users-pat",
@@ -468,17 +468,17 @@ For Claude Chat or any HTTP-based MCP client.
 
 ### systemd (Linux)
 
-Create `/etc/systemd/system/ado-mcp.service`:
+Create `/etc/systemd/system/azure-devops-local-mcp.service`:
 
 ```ini
 [Unit]
-Description=ADO MCP Server
+Description=Azure DevOps Local MCP Server
 After=network.target
 
 [Service]
 Type=simple
-User=ado-mcp
-WorkingDirectory=/opt/ado-mcp
+User=azure-devops-local-mcp
+WorkingDirectory=/opt/azure-devops-local-mcp
 ExecStart=/usr/bin/node dist/index.js --transport http
 Restart=on-failure
 RestartSec=5
@@ -486,13 +486,13 @@ RestartSec=5
 Environment=ADO_ORG_URL=https://dev.azure.com/your-org
 Environment=ADO_DEFAULT_PROJECT=MyProject
 Environment=PORT=3100
-EnvironmentFile=/etc/ado-mcp/secrets.env
+EnvironmentFile=/etc/azure-devops-local-mcp/secrets.env
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Store the PAT in `/etc/ado-mcp/secrets.env` (mode 0600, owned by `ado-mcp`):
+Store the PAT in `/etc/azure-devops-local-mcp/secrets.env` (mode 0600, owned by `azure-devops-local-mcp`):
 
 ```
 ADO_PAT=your-pat-here
@@ -501,9 +501,9 @@ ADO_PAT=your-pat-here
 Enable and start:
 
 ```bash
-systemctl enable ado-mcp
-systemctl start ado-mcp
-systemctl status ado-mcp
+systemctl enable azure-devops-local-mcp
+systemctl start azure-devops-local-mcp
+systemctl status azure-devops-local-mcp
 ```
 
 ### Reverse proxy (nginx)
@@ -513,10 +513,10 @@ If you want TLS termination or path-based routing:
 ```nginx
 server {
     listen 443 ssl;
-    server_name ado-mcp.internal.company.com;
+    server_name azure-devops-local-mcp.internal.company.com;
 
-    ssl_certificate     /etc/ssl/certs/ado-mcp.crt;
-    ssl_certificate_key /etc/ssl/private/ado-mcp.key;
+    ssl_certificate     /etc/ssl/certs/azure-devops-local-mcp.crt;
+    ssl_certificate_key /etc/ssl/private/azure-devops-local-mcp.key;
 
     location / {
         proxy_pass         http://127.0.0.1:3100;
@@ -538,7 +538,7 @@ Managed Identity is the recommended authentication method when running in Azure.
 
 ```bash
 az identity create \
-  --name ado-mcp-identity \
+  --name azure-devops-local-mcp-identity \
   --resource-group my-rg
 ```
 
@@ -550,13 +550,13 @@ In Azure DevOps: **Organisation Settings → Users** → add the managed identit
 
 ```bash
 az containerapp create \
-  --name ado-mcp \
+  --name azure-devops-local-mcp \
   --resource-group my-rg \
   --environment my-env \
-  --image your-registry/ado-mcp:0.1.0 \
+  --image your-registry/azure-devops-local-mcp:0.1.0 \
   --target-port 3100 \
   --ingress external \
-  --user-assigned-identity /subscriptions/.../providers/Microsoft.ManagedIdentity/userAssignedIdentities/ado-mcp-identity \
+  --user-assigned-identity /subscriptions/.../providers/Microsoft.ManagedIdentity/userAssignedIdentities/azure-devops-local-mcp-identity \
   --env-vars \
       ADO_ORG_URL="https://dev.azure.com/your-org" \
       ADO_DEFAULT_PROJECT="MyProject" \
@@ -572,7 +572,7 @@ The HTTP server exposes a health endpoint:
 
 ```
 GET /health
-→ { "status": "ok", "server": "ado-mcp", "version": "0.2.0" }
+→ { "status": "ok", "server": "azure-devops-local-mcp", "version": "0.2.0" }
 ```
 
 Configure Container Apps (or any load balancer) to probe this path.
@@ -638,7 +638,7 @@ The PAT scope required for each tool is documented in the tool's description (vi
 
 ### Multi-tenant considerations
 
-If one ado-mcp instance serves multiple users or projects:
+If one azure-devops-local-mcp instance serves multiple users or projects:
 
 - Use OAuth 2.0 with per-user token exchange rather than a shared PAT
 - Consider running one instance per tenant to provide isolation at the process boundary

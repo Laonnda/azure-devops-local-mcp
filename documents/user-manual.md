@@ -1,4 +1,4 @@
-# ADO-MCP User Manual
+# Azure DevOps Local MCP — User Manual
 
 Connect Claude Code and Claude Chat to your Azure DevOps organisation. Once set up, you can ask Claude in plain language to look up work items, review pull requests, trigger pipelines, search code, and more — without opening a browser or writing anything technical yourself.
 
@@ -6,9 +6,9 @@ Connect Claude Code and Claude Chat to your Azure DevOps organisation. Once set 
 
 ## Table of Contents
 
-1. [What is ado-mcp?](#what-is-ado-mcp)
+1. [What is azure-devops-local-mcp?](#what-is-azure-devops-local-mcp)
 2. [What you need before you start](#what-you-need-before-you-start)
-3. [Installing ado-mcp](#installing-ado-mcp)
+3. [Installing azure-devops-local-mcp](#installing-azure-devops-local-mcp)
 4. [Connecting to Claude Code](#connecting-to-claude-code)
 5. [Connecting to Claude Chat (Web)](#connecting-to-claude-chat-web)
 6. [Tool Reference](#tool-reference)
@@ -17,9 +17,9 @@ Connect Claude Code and Claude Chat to your Azure DevOps organisation. Once set 
 
 ---
 
-## What is ado-mcp?
+## What is azure-devops-local-mcp?
 
-ado-mcp is a small background program that lets Claude talk to your Azure DevOps organisation. Instead of opening the Azure DevOps website, you just describe what you want in plain language and Claude takes care of the rest.
+azure-devops-local-mcp is a small background program that lets Claude talk to your Azure DevOps organisation. Instead of opening the Azure DevOps website, you just describe what you want in plain language and Claude takes care of the rest.
 
 What you can do:
 
@@ -37,19 +37,19 @@ What you can do:
 
 ## What you need before you start
 
-- **Node.js** — a free runtime that ado-mcp runs on. Download and install it from [https://nodejs.org](https://nodejs.org) (choose the LTS version). Just run the installer and click through — no configuration needed.
+- **Node.js** — a free runtime that azure-devops-local-mcp runs on. Download and install it from [https://nodejs.org](https://nodejs.org) (choose the LTS version). Just run the installer and click through — no configuration needed.
 - **Claude Code** or access to **claude.ai** — whichever you plan to use.
 - An **Azure DevOps account** with access to your organisation.
 
 ---
 
-## Installing ado-mcp
+## Installing azure-devops-local-mcp
 
 ### Easiest: the MCPB bundle (Claude Desktop, all platforms)
 
 If you use **Claude Desktop**, you do not need Node.js or a setup script:
 
-1. Download `ado-mcp-<version>.mcpb` from the [GitHub releases page](https://github.com/Laonnda/ado-mcp/releases/latest).
+1. Download `azure-devops-local-mcp-<version>.mcpb` from the [GitHub releases page](https://github.com/Laonnda/azure-devops-local-mcp/releases/latest).
 2. Double-click the file, or drag it into Claude Desktop **Settings → Extensions**.
 3. Fill in your Azure DevOps organization URL and Personal Access Token, then enable the extension.
 
@@ -57,11 +57,11 @@ That is the whole installation. The sections below cover the alternative ZIP-bas
 
 ### Alternative: the Windows ZIP
 
-Download `ado-mcp-windows-x.x.x.zip` from the GitHub releases page.
+Download `azure-devops-local-mcp-windows-x.x.x.zip` from the GitHub releases page.
 
 1. **Install Node.js** if you have not already — download the LTS installer from [https://nodejs.org](https://nodejs.org) and click through with all defaults.
 
-2. **Extract the ZIP** to a permanent folder, for example `C:\tools\ado-mcp`. Do not move this folder afterwards.
+2. **Extract the ZIP** to a permanent folder, for example `C:\tools\azure-devops-local-mcp`. Do not move this folder afterwards.
 
 3. **Right-click `setup.ps1`** inside the extracted folder and choose **Run with PowerShell**. If Windows asks whether to allow it, click **Run anyway**.
 
@@ -75,9 +75,9 @@ The setup script writes the configuration automatically. You only need to run it
 
 ## Connecting to Claude Code
 
-You connect ado-mcp to Claude Code by creating a small configuration file called **`.mcp.json`**. You do this once, and Claude Code will start ado-mcp automatically every time you use it.
+You connect azure-devops-local-mcp to Claude Code by creating a small configuration file called **`.mcp.json`**. You do this once, and Claude Code will start azure-devops-local-mcp automatically every time you use it.
 
-You will also need a **Personal Access Token (PAT)** from Azure DevOps — this is how ado-mcp proves to Azure DevOps that it is allowed to act on your behalf. To create one: click your profile picture in Azure DevOps → **Personal access tokens** → **+ New Token**. Give it a name (e.g. `ado-mcp-claude`), set an expiry, and tick only the scopes you need (see the scope column in the Tool Reference section). Copy the token immediately — Azure DevOps only shows it once.
+You will also need a **Personal Access Token (PAT)** from Azure DevOps — this is how azure-devops-local-mcp proves to Azure DevOps that it is allowed to act on your behalf. To create one: click your profile picture in Azure DevOps → **Personal access tokens** → **+ New Token**. Give it a name (e.g. `azure-devops-local-mcp-claude`), set an expiry, and tick only the scopes you need (see the scope column in the Tool Reference section). Copy the token immediately — Azure DevOps only shows it once.
 
 ### Where to put the file
 
@@ -99,7 +99,7 @@ Create a new file called `.mcp.json` in your chosen folder with this content:
 {
   "mcpServers": {
     "ado": {
-      "command": "ado-mcp",
+      "command": "azure-devops-local-mcp",
       "env": {
         "ADO_ORG_URL": "https://dev.azure.com/your-org",
         "ADO_PAT": "paste-your-pat-here",
@@ -134,7 +134,7 @@ You should see `ado` listed as a connected server. If it shows an error, see the
 
 ## Connecting to Claude Chat (Web)
 
-Claude Chat connects to ado-mcp over a local web address. You start ado-mcp as a local server, then point Claude Chat to it.
+Claude Chat connects to azure-devops-local-mcp over a local web address. You start azure-devops-local-mcp as a local server, then point Claude Chat to it.
 
 ### 1. Start the server
 
@@ -144,7 +144,7 @@ Open PowerShell and run the following commands one at a time:
 $env:ADO_ORG_URL = "https://dev.azure.com/your-org"
 $env:ADO_PAT = "your-pat-here"
 $env:ADO_DEFAULT_PROJECT = "MyProject"
-ado-mcp --transport http
+azure-devops-local-mcp --transport http
 ```
 
 The server starts and listens on `http://localhost:3100`. **Keep this PowerShell window open** while you use Claude Chat.
@@ -153,7 +153,7 @@ To use a different port:
 
 ```
 $env:PORT = "4000"
-ado-mcp --transport http
+azure-devops-local-mcp --transport http
 ```
 
 ### 2. Connect in Claude Chat
@@ -237,7 +237,7 @@ All tools follow the naming pattern `ado_<area>_<action>`. You never need to cal
 
 ## Example Conversations
 
-The examples below show what you can type to Claude once ado-mcp is connected. You never need to mention tool names.
+The examples below show what you can type to Claude once azure-devops-local-mcp is connected. You never need to mention tool names.
 
 ### Work items
 
@@ -324,7 +324,7 @@ Update the wiki page /Runbooks/Deploy with this new content: ...
 
 ### Node.js is not installed or too old
 
-ado-mcp requires Node.js version 20 or later. To check which version you have, open PowerShell and run:
+azure-devops-local-mcp requires Node.js version 20 or later. To check which version you have, open PowerShell and run:
 
 ```
 node --version
@@ -334,7 +334,7 @@ If it prints `v20.x.x` or higher you are good. If it says the command was not fo
 
 ### "No authentication method configured"
 
-ado-mcp could not find your token. Check that `ADO_PAT` is filled in correctly in `.mcp.json` and that there are no extra spaces before or after the token.
+azure-devops-local-mcp could not find your token. Check that `ADO_PAT` is filled in correctly in `.mcp.json` and that there are no extra spaces before or after the token.
 
 ### "Authentication failed"
 
@@ -359,6 +359,6 @@ Try checking that your Azure DevOps organisation URL does not have a trailing sl
 
 ### Claude Chat server does not respond
 
-- Check that the PowerShell window with `ado-mcp --transport http` is still open
+- Check that the PowerShell window with `azure-devops-local-mcp --transport http` is still open
 - Check that nothing else is using port 3100: open PowerShell and run `netstat -ano | findstr :3100`
 - Make sure the URL in Claude Chat is `http://localhost:3100/mcp` (with `/mcp` at the end)

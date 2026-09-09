@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.3",
-  "name": "ado-mcp",
-  "display_name": "Azure DevOps (ado-mcp)",
+  "name": "azure-devops-local-mcp",
+  "display_name": "Azure DevOps Local MCP",
   "version": "0.2.0",
   "description": "MCP server for Azure DevOps — work items, repos, pull requests, pipelines, wikis, test plans, and code search",
   "long_description": "Connects Claude to the Azure DevOps REST API (v7.2). Query and update work items, browse repositories and pull requests, trigger and inspect pipelines, read and update wiki pages, manage test plans, and search code across projects. Authenticates with a Personal Access Token (PAT).",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Laonnda/ado-mcp.git"
+    "url": "https://github.com/Laonnda/azure-devops-local-mcp.git"
   },
   "license": "MIT",
   "keywords": ["azure-devops", "mcp", "claude", "claude-desktop", "mcpb", "work-items", "pipelines", "git"],

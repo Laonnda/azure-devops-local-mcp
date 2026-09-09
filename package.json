@@ -1,11 +1,11 @@
 {
-  "name": "ado-mcp",
+  "name": "azure-devops-local-mcp",
   "version": "0.2.0",
   "description": "MCP server for Azure DevOps — connect Claude to work items, repos, pipelines, and more",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "ado-mcp": "dist/index.js"
+    "azure-devops-local-mcp": "dist/index.js"
   },
   "files": [
     "dist/",
@@ -44,7 +44,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Laonnda/ado-mcp.git"
+    "url": "https://github.com/Laonnda/azure-devops-local-mcp.git"
   },
   "keywords": [
     "mcp",
@@ -52,7 +52,7 @@
     "claude",
     "ai"
   ],
-  "homepage": "https://github.com/Laonnda/ado-mcp",
+  "homepage": "https://github.com/Laonnda/azure-devops-local-mcp",
   "engines": {
     "node": ">=20"
   },
